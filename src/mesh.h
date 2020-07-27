@@ -17,12 +17,12 @@ public:
         glm::vec3 position;
         glm::vec3 normal;
     };
-    void setData(const std::vector<Vertex> &vertices);
+    void setData(const std::vector<Vertex> &vertices, const std::vector<unsigned> &indices);
 
     void render() const;
 
 private:
-    int m_vertexCount = 0;
+    int m_elementCount = 0;
     GLuint m_vao;
-    GLuint m_vbo;
+    GLuint m_vbo[2];
 };

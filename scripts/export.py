@@ -12,15 +12,25 @@ def write(filepath):
         for obj in objects:
             matrix = obj.matrix_world.copy()
             mesh = obj.data
+
             vertices = mesh.vertices[:]
+            f.write(struct.pack('<l', len(vertices)))
+            for vertex in vertices:
+                f.write(struct.pack('<3f', *vertex.co))
+                f.write(struct.pack('<3f', *vertex.normal))
+
             polygons = mesh.polygons[:]
-            f.write(struct.pack('<l', len(polygons)))
-            print('Exporting %s (%d vertices, %d polygons)' % (mesh.name, len(vertices), len(polygons)))
+            triangles = 0
             for poly in polygons:
-                f.write(struct.pack('<l', len(poly.vertices)))
-                for index in poly.vertices:
-                    vertex = vertices[index]
-                    f.write(struct.pack('<3f', *vertex.co))
-                    f.write(struct.pack('<3f', *vertex.normal))
+                triangles += len(poly.vertices) - 2
+            f.write(struct.pack('<l', triangles))
+            print('Exporting %s (%d vertices, %d polygons, %d triangles)' % (mesh.name, len(vertices), len(polygons), triangles))
+            for poly in polygons:
+                for i in range(1, len(poly.vertices) - 1):
+                    def write_vertex(index):
+                        f.write(struct.pack('<l', poly.vertices[index]))
+                    write_vertex(0)
+                    write_vertex(i)
+                    write_vertex(i + 1)
 
 write('scene.bin')

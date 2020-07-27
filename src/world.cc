@@ -25,90 +25,19 @@ std::unique_ptr<Mesh> loadMesh(const char *path)
         return value;
     };
 
-    const auto meshCount = nextInt();;
+    nextInt(); // ignore mesh count
 
-    std::vector<Mesh::Vertex> meshVertices;
+    const auto vertexCount = nextInt();
 
-    for (int i = 0; i < meshCount; ++i)
-    {
-        const auto polygonCount = nextInt();
-        for (int j = 0; j < polygonCount; ++j)
-        {
-            const auto vertexCount = nextInt();
-            std::vector<Mesh::Vertex> polyVertices(vertexCount);
-            for (auto &vertex : polyVertices) {
-                // TODO handle endianness
-                ifs.read(reinterpret_cast<char *>(&vertex), sizeof(vertex));
-            }
-            for (int k = 1; k < vertexCount - 1; ++k) {
-                meshVertices.push_back(polyVertices[0]);
-                meshVertices.push_back(polyVertices[k]);
-                meshVertices.push_back(polyVertices[k + 1]);
-            }
-        }
-    }
+    std::vector<Mesh::Vertex> vertices(vertexCount);
+    ifs.read(reinterpret_cast<char *>(vertices.data()), vertexCount * sizeof(Mesh::Vertex));
+
+    const auto triangleCount = nextInt();
+    std::vector<unsigned> indices(3 * triangleCount);
+    ifs.read(reinterpret_cast<char *>(indices.data()), 3 * triangleCount * sizeof(unsigned));
 
     std::unique_ptr<Mesh> mesh(new Mesh);
-    mesh->setData(meshVertices);
-    return mesh;
-}
-
-std::unique_ptr<Mesh> loadMeshFromObj(const char *path)
-{
-    std::ifstream ifs(path);
-    if (ifs.fail())
-        panic("failed to open %s\n", path);
-
-    std::vector<glm::vec3> positions;
-    std::vector<glm::vec3> normals;
-    struct VertexIndices {
-        int position_index;
-        int normal_index;
-    };
-    using Face = std::vector<VertexIndices>;
-    std::vector<Face> faces;
-
-    std::string line;
-    while (std::getline(ifs, line)) {
-        std::vector<std::string> tokens;
-        boost::split(tokens, line, boost::is_any_of(" \t"), boost::token_compress_on);
-        if (tokens.empty())
-            continue;
-        if (tokens.front() == "v") {
-            assert(tokens.size() == 4);
-            positions.emplace_back(std::stof(tokens[1]), std::stof(tokens[2]), std::stof(tokens[3]));
-        } else if (tokens.front() == "vn") {
-            assert(tokens.size() == 4);
-            normals.emplace_back(std::stof(tokens[1]), std::stof(tokens[2]), std::stof(tokens[3]));
-        } else if (tokens.front() == "f") {
-            Face f;
-            for (auto it = std::next(tokens.begin()); it != tokens.end(); ++it) {
-                std::vector<std::string> components;
-                boost::split(components, *it, boost::is_any_of("/"), boost::token_compress_off);
-                assert(components.size() == 3);
-                f.push_back({ std::stoi(components[0]) - 1, std::stoi(components[2]) - 1 });
-            }
-            faces.push_back(f);
-        }
-    }
-
-    std::vector<Mesh::Vertex> vertices;
-    for (const auto &face : faces) {
-        for (size_t i = 1; i < face.size() - 1; ++i) {
-            const auto toVertex = [&positions, &normals](const auto &vertex) -> Mesh::Vertex {
-                return { glm::vec4(positions[vertex.position_index], 1), glm::vec4(normals[vertex.normal_index], 1) };
-            };
-            const auto v0 = toVertex(face[0]);
-            const auto v1 = toVertex(face[i]);
-            const auto v2 = toVertex(face[i + 1]);
-            vertices.push_back(v0);
-            vertices.push_back(v1);
-            vertices.push_back(v2);
-        }
-    }
-
-    std::unique_ptr<Mesh> mesh(new Mesh);
-    mesh->setData(vertices);
+    mesh->setData(vertices, indices);
     return mesh;
 }
 

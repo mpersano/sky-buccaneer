@@ -18,24 +18,27 @@ struct VAOBinder : NonCopyable {
 
 Mesh::Mesh()
 {
-    glGenBuffers(1, &m_vbo);
+    glGenBuffers(2, m_vbo);
     glGenVertexArrays(1, &m_vao);
 }
 
 Mesh::~Mesh()
 {
-    glDeleteBuffers(1, &m_vbo);
+    glDeleteBuffers(2, m_vbo);
     glDeleteVertexArrays(1, &m_vao);
 }
 
-void Mesh::setData(const std::vector<Vertex> &vertices)
+void Mesh::setData(const std::vector<Vertex> &vertices, const std::vector<unsigned> &indices)
 {
-    m_vertexCount = vertices.size();
+    m_elementCount = indices.size();
 
     VAOBinder vaoBinder(m_vao);
 
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vbo[0]);
     glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo[1]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned) * indices.size(), indices.data(), GL_STATIC_DRAW);
 
     static_assert(sizeof(glm::vec4) == 4 * sizeof(GLfloat));
 
@@ -54,5 +57,5 @@ void Mesh::setData(const std::vector<Vertex> &vertices)
 void Mesh::render() const
 {
     VAOBinder vaoBinder(m_vao);
-    glDrawArrays(GL_TRIANGLES, 0, m_vertexCount);
+    glDrawElements(GL_TRIANGLES, m_elementCount, GL_UNSIGNED_INT, nullptr);
 }
