@@ -1,5 +1,6 @@
 #include "noncopyable.h"
 #include "panic.h"
+#include "world.h"
 
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
@@ -50,17 +51,9 @@ Window::~Window()
 
 }
 
-void update(double /* elapsed */)
-{
-}
-
-void render()
-{
-}
-
 int main()
 {
-    Window window(400, 400, "hello");
+    Window window(800, 400, "hello");
 
     glewInit();
 
@@ -75,16 +68,22 @@ int main()
             glfwSetWindowShouldClose(window, GL_TRUE);
     });
 
-    double curTime = glfwGetTime();
-    while (!glfwWindowShouldClose(window)) {
-        float elapsed;
-        auto now = glfwGetTime();
-        elapsed = now - curTime;
+    {
+        World world;
+        world.resize(window.width(), window.height());
 
-        update(elapsed);
-        render();
+        double curTime = glfwGetTime();
+        while (!glfwWindowShouldClose(window)) {
+            float elapsed;
+            auto now = glfwGetTime();
+            elapsed = now - curTime;
+            curTime = now;
 
-        glfwSwapBuffers(window);
-        glfwPollEvents();
+            world.update(elapsed);
+            world.render();
+
+            glfwSwapBuffers(window);
+            glfwPollEvents();
+        }
     }
 }

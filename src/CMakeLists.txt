@@ -3,11 +3,14 @@ find_package(GLEW REQUIRED)
 
 set(GAME_SOURCES
     main.cc
-    window.cc
-    window.h
+    mesh.cc
+    shaderprogram.cc
+    world.cc
 )
 
 add_executable(game ${GAME_SOURCES})
+
+target_compile_features(game PUBLIC cxx_std_17)
 
 target_include_directories(game
 PUBLIC
