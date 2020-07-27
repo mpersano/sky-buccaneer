@@ -12,6 +12,47 @@
 
 namespace {
 
+std::unique_ptr<Mesh> loadMesh(const char *path)
+{
+    std::ifstream ifs(path, std::ios::binary);
+    if (!ifs)
+        panic("failed to open %s\n", path);
+
+    const auto nextInt = [&ifs] {
+        // TODO handle endianness
+        uint32_t value;
+        ifs.read(reinterpret_cast<char *>(&value), sizeof(value));
+        return value;
+    };
+
+    const auto meshCount = nextInt();;
+
+    std::vector<Mesh::Vertex> meshVertices;
+
+    for (int i = 0; i < meshCount; ++i)
+    {
+        const auto polygonCount = nextInt();
+        for (int j = 0; j < polygonCount; ++j)
+        {
+            const auto vertexCount = nextInt();
+            std::vector<Mesh::Vertex> polyVertices(vertexCount);
+            for (auto &vertex : polyVertices) {
+                // TODO handle endianness
+                ifs.read(reinterpret_cast<char *>(&vertex), sizeof(vertex));
+            }
+            for (int k = 1; k < vertexCount - 1; ++k) {
+                meshVertices.push_back(polyVertices[0]);
+                meshVertices.push_back(polyVertices[k]);
+                meshVertices.push_back(polyVertices[k + 1]);
+            }
+        }
+    }
+
+    std::unique_ptr<Mesh> mesh(new Mesh);
+    mesh->setData(meshVertices);
+    return mesh;
+}
+
 std::unique_ptr<Mesh> loadMeshFromObj(const char *path)
 {
     std::ifstream ifs(path);
@@ -75,7 +116,7 @@ std::unique_ptr<Mesh> loadMeshFromObj(const char *path)
 
 World::World()
     : m_shaderProgram(new GL::ShaderProgram)
-    , m_mesh(std::move(loadMeshFromObj("assets/meshes/cow.obj")))
+    , m_mesh(std::move(loadMesh("assets/meshes/scene.bin")))
 {
     m_shaderProgram->addShader(GL_VERTEX_SHADER, "assets/shaders/simple.vert");
     m_shaderProgram->addShader(GL_FRAGMENT_SHADER, "assets/shaders/simple.frag");
@@ -104,8 +145,8 @@ void World::render() const
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    auto modelMatrix = glm::rotate(glm::mat4(1), 3.0f * static_cast<float>(m_time), glm::vec3(0, 1, 0));
-    modelMatrix = glm::scale(modelMatrix, glm::vec3(0.2f));
+    auto modelMatrix = glm::rotate(glm::mat4(1), 3.0f * static_cast<float>(m_time), glm::vec3(-1, -0.5, 1));
+    modelMatrix = glm::scale(modelMatrix, glm::vec3(0.8f));
     const auto mvp = m_projectionMatrix * m_viewMatrix * modelMatrix;
 
     m_shaderProgram->bind();
