@@ -1,55 +1,17 @@
 #include "world.h"
 
-#include "mesh.h"
 #include "panic.h"
-#include "shaderprogram.h"
-
-#include <boost/algorithm/string.hpp>
+#include "entity.h"
 
 #include <glm/gtc/matrix_transform.hpp>
+#include <GL/glew.h>
 
 #include <fstream>
 
-namespace {
-
-std::unique_ptr<Mesh> loadMesh(const char *path)
-{
-    std::ifstream ifs(path, std::ios::binary);
-    if (!ifs)
-        panic("failed to open %s\n", path);
-
-    const auto nextInt = [&ifs] {
-        // TODO handle endianness
-        uint32_t value;
-        ifs.read(reinterpret_cast<char *>(&value), sizeof(value));
-        return value;
-    };
-
-    nextInt(); // ignore mesh count
-
-    const auto vertexCount = nextInt();
-
-    std::vector<Mesh::Vertex> vertices(vertexCount);
-    ifs.read(reinterpret_cast<char *>(vertices.data()), vertexCount * sizeof(Mesh::Vertex));
-
-    const auto triangleCount = nextInt();
-    std::vector<unsigned> indices(3 * triangleCount);
-    ifs.read(reinterpret_cast<char *>(indices.data()), 3 * triangleCount * sizeof(unsigned));
-
-    std::unique_ptr<Mesh> mesh(new Mesh);
-    mesh->setData(vertices, indices);
-    return mesh;
-}
-
-} // namespace
-
 World::World()
-    : m_shaderProgram(new GL::ShaderProgram)
-    , m_mesh(std::move(loadMesh("assets/meshes/scene.bin")))
+    : m_entity(new Entity)
 {
-    m_shaderProgram->addShader(GL_VERTEX_SHADER, "assets/shaders/simple.vert");
-    m_shaderProgram->addShader(GL_FRAGMENT_SHADER, "assets/shaders/simple.frag");
-    m_shaderProgram->link();
+    m_entity->load("assets/meshes/scene.bin");
 
     glClearColor(0, 0, 0, 0);
     glEnable(GL_CULL_FACE);
@@ -78,12 +40,7 @@ void World::render() const
     modelMatrix = glm::scale(modelMatrix, glm::vec3(0.8f));
     const auto mvp = m_projectionMatrix * m_viewMatrix * modelMatrix;
 
-    m_shaderProgram->bind();
-    m_shaderProgram->setUniform("mvp", mvp);
-    m_shaderProgram->setUniform("modelMatrix", modelMatrix);
-    m_shaderProgram->setUniform("lightPosition", glm::vec3(0, 0, -2));
-    m_shaderProgram->setUniform("color", glm::vec3(1));
-    m_mesh->render();
+    m_entity->render(mvp);
 }
 
 void World::update(double elapsed)

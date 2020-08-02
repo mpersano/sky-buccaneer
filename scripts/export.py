@@ -44,7 +44,7 @@ def write_entity(filepath, context):
                 for i in range(1, len(poly.vertices) - 1):
                     write_int32(poly.vertices[0])
                     write_int32(poly.vertices[i])
-                    write_int32(poly.vertices[ii + 1])
+                    write_int32(poly.vertices[i + 1])
 
         write_int32(len(objects))
         for obj in objects:

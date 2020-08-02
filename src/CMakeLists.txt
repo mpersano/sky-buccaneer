@@ -6,6 +6,7 @@ set(GAME_SOURCES
     mesh.cc
     shaderprogram.cc
     world.cc
+    entity.cc
 )
 
 add_executable(game ${GAME_SOURCES})
