@@ -1,7 +1,7 @@
 ---
 BasedOnStyle: WebKit
 Standard: Cpp11
-SortIncludes: false
+SortIncludes: true
 
 ColumnLimit: 0
 ContinuationIndentWidth: 8
@@ -17,7 +17,6 @@ AllowShortFunctionsOnASingleLine: Inline
 ConstructorInitializerAllOnOneLineOrOnePerLine: true
 AlwaysBreakTemplateDeclarations: true
 BreakBeforeBinaryOperators: None
-SortIncludes: true
 
 BreakBeforeBraces: Custom
 BraceWrapping:
