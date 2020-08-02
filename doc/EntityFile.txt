@@ -1,0 +1,45 @@
+Entity File Structure
+=====================
+
+struct Vertex
+{
+    vec3 position;
+	vec3 normal;
+};
+
+struct Triangle
+{
+    int vertices[3]; // index into vertex array in Mesh
+};
+
+struct Mesh
+{
+    uint32_t vertexCount;
+	Vertex vertices[];
+	uint32_t triangleCount;
+	Triangle triangles[];
+};
+
+struct Node
+{
+	enum Type : uint8_t
+	{
+		Empty = 0,
+		Mesh = 1,
+	};
+    Type type;
+    mat4 transform;
+    uint32_t childCount;
+	uint32_t children[]; // index into node array in Entity
+};
+
+struct MeshNode : Node
+{
+    Mesh mesh;
+};
+
+struct Entity
+{
+    uint32_t nodeCount;
+    Node nodes[];
+};
