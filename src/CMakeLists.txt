@@ -10,6 +10,8 @@ set(GAME_SOURCES
     transform.cc
     transformutils.cc
     renderer.cc
+    shadowbuffer.cc
+    camera.cc
 )
 
 add_executable(game ${GAME_SOURCES})

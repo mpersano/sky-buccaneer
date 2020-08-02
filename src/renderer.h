@@ -3,12 +3,16 @@
 #include <glm/glm.hpp>
 
 #include <memory>
+#include <vector>
+
+#include "camera.h"
 
 class Mesh;
 
 namespace GL {
 class ShaderProgram;
-}
+class ShadowBuffer;
+} // namespace GL
 
 class Renderer
 {
@@ -23,7 +27,17 @@ public:
     void end();
 
 private:
+    int m_width = 1;
+    int m_height = 1;
+    Camera m_camera;
     glm::mat4 m_projectionMatrix;
-    glm::mat4 m_viewMatrix;
-    std::unique_ptr<GL::ShaderProgram> m_shaderProgram;
+    glm::vec3 m_lightPosition;
+    std::unique_ptr<GL::ShaderProgram> m_shaderPhong;
+    std::unique_ptr<GL::ShaderProgram> m_shaderShadow;
+    std::unique_ptr<GL::ShadowBuffer> m_shadowBuffer;
+    struct DrawCall {
+        glm::mat4 worldMatrix;
+        const Mesh *mesh;
+    };
+    std::vector<DrawCall> m_drawCalls;
 };
