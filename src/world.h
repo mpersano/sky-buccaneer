@@ -5,6 +5,7 @@
 #include <memory>
 
 class Entity;
+class Renderer;
 
 class World
 {
@@ -17,8 +18,7 @@ public:
     void render() const;
 
 private:
-    glm::mat4 m_projectionMatrix;
-    glm::mat4 m_viewMatrix;
+    std::unique_ptr<Renderer> m_renderer;
     std::unique_ptr<Entity> m_entity;
     double m_time = 0.0;
 };

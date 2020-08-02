@@ -39,14 +39,7 @@ std::unique_ptr<Mesh> readMesh(std::istream& is)
 
 } // namespace
 
-Entity::Entity()
-    : m_shaderProgram(new GL::ShaderProgram)
-{
-    m_shaderProgram->addShader(GL_VERTEX_SHADER, "assets/shaders/simple.vert");
-    m_shaderProgram->addShader(GL_FRAGMENT_SHADER, "assets/shaders/simple.frag");
-    m_shaderProgram->link();
-}
-
+Entity::Entity() = default;
 Entity::~Entity() = default;
 
 void Entity::load(const char *filepath)
@@ -69,9 +62,15 @@ void Entity::load(const char *filepath)
     });
     for (auto &node : m_nodes)
     {
-        const auto type = read<uint8_t>(is);
-        node->transform = glm::transpose(read<glm::mat4>(is));
-        std::cout << "****   transform=" << glm::to_string(node->transform) << '\n';
+        enum class NodeType { Empty, Mesh };
+        const auto nodeType = static_cast<NodeType>(read<uint8_t>(is));
+        node->transform = read<Transform>(is);
+        std::cout
+            << "**** transform: "
+            << "rotation=" << glm::to_string(glm::eulerAngles(node->transform.rotation)) << ", "
+            << "scale=" << glm::to_string(node->transform.scale) << ", "
+            << "translation=" << glm::to_string(node->transform.translation)
+            << "matrix=" << glm::to_string(node->transform.matrix()) << '\n';
         const auto childCount = read<uint32_t>(is);
         for (int i = 0; i < childCount; ++i)
         {
@@ -82,7 +81,7 @@ void Entity::load(const char *filepath)
             child->parent = node.get();
             node->children.push_back(child);
         }
-        if (type == 1) {
+        if (nodeType == NodeType::Mesh) {
             node->mesh = readMesh(is);
         }
     }
@@ -91,33 +90,5 @@ void Entity::load(const char *filepath)
         if (!node->parent) {
             m_rootNodes.push_back(node.get());
         }
-    }
-}
-
-void Entity::render(const glm::mat4& mvp) const
-{
-    m_shaderProgram->bind();
-    m_shaderProgram->setUniform("lightPosition", glm::vec3(0, 0, -2));
-    m_shaderProgram->setUniform("color", glm::vec3(1));
-
-    for (auto *node : m_rootNodes) {
-        render(mvp, node);
-    }
-}
-
-void Entity::render(const glm::mat4& mvp, const Node *node) const
-{
-    if (node->mesh)
-    {
-        std::cout << "mvp=" << glm::to_string(mvp) << '\n';
-        m_shaderProgram->setUniform("mvp", mvp * node->transform);
-#if 0
-        m_shaderProgram->setUniform("modelMatrix", modelMatrix);
-#endif
-        node->mesh->render();
-    }
-    for (const auto *child : node->children)
-    {
-        render(mvp * node->transform, child);
     }
 }

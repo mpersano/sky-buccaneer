@@ -8,10 +8,11 @@ out vec3 vs_normal;
 
 uniform mat4 mvp;
 uniform mat4 modelMatrix;
+uniform mat3 normalMatrix;
 
 void main(void)
 {
     vs_position = vec3(modelMatrix * vec4(position, 1.0));
-    vs_normal = normalize(mat3(modelMatrix) * -normal); // FIXME
+    vs_normal = normalize(normalMatrix * normal);
     gl_Position = mvp * vec4(position, 1.0);
 }

@@ -20,6 +20,13 @@ struct Mesh
 	Triangle triangles[];
 };
 
+struct Transform
+{
+    glm::quat rotation;
+    glm::vec3 scale;
+    glm::vec3 translation;
+};
+
 struct Node
 {
 	enum Type : uint8_t
@@ -28,7 +35,7 @@ struct Node
 		Mesh = 1,
 	};
     Type type;
-    mat4 transform;
+    Transform transform;
     uint32_t childCount;
 	uint32_t children[]; // index into node array in Entity
 };

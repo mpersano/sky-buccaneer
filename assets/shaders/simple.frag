@@ -10,7 +10,6 @@ out vec4 fragColor;
 
 void main(void)
 {
-    // float intensity = max(dot(vs_normal, normalize(lightPosition - vs_position)), 0.0);
-    // fragColor = vec4(intensity * color, 1.0);
-    fragColor = vec4(1);
+    float intensity = max(dot(vs_normal, normalize(lightPosition - vs_position)), 0.0);
+    fragColor = vec4(intensity * color, 1.0);
 }
