@@ -1,7 +1,7 @@
 #include "entity.h"
 
-#include "panic.h"
 #include "mesh.h"
+#include "panic.h"
 #include "shaderprogram.h"
 
 #include <algorithm>
@@ -12,8 +12,8 @@
 
 namespace {
 
-template <typename T>
-T read(std::istream& is)
+template<typename T>
+T read(std::istream &is)
 {
     // TODO handle endianness
     T value;
@@ -21,7 +21,7 @@ T read(std::istream& is)
     return value;
 }
 
-std::unique_ptr<Mesh> readMesh(std::istream& is)
+std::unique_ptr<Mesh> readMesh(std::istream &is)
 {
     const auto vertexCount = read<uint32_t>(is);
 
@@ -39,8 +39,9 @@ std::unique_ptr<Mesh> readMesh(std::istream& is)
 
 } // namespace
 
-Entity::Entity() = default;
 Entity::~Entity() = default;
+
+Entity::Node::~Node() = default;
 
 void Entity::load(const char *filepath)
 {
@@ -60,20 +61,13 @@ void Entity::load(const char *filepath)
     std::generate_n(std::back_inserter(m_nodes), nodeCount, [] {
         return std::make_unique<Node>();
     });
-    for (auto &node : m_nodes)
-    {
-        enum class NodeType { Empty, Mesh };
+    for (auto &node : m_nodes) {
+        enum class NodeType { Empty,
+                              Mesh };
         const auto nodeType = static_cast<NodeType>(read<uint8_t>(is));
         node->transform = read<Transform>(is);
-        std::cout
-            << "**** transform: "
-            << "rotation=" << glm::to_string(glm::eulerAngles(node->transform.rotation)) << ", "
-            << "scale=" << glm::to_string(node->transform.scale) << ", "
-            << "translation=" << glm::to_string(node->transform.translation)
-            << "matrix=" << glm::to_string(node->transform.matrix()) << '\n';
         const auto childCount = read<uint32_t>(is);
-        for (int i = 0; i < childCount; ++i)
-        {
+        for (int i = 0; i < childCount; ++i) {
             const auto childIndex = read<uint32_t>(is);
             panicUnless(childIndex < m_nodes.size());
             auto *child = m_nodes[childIndex].get();
@@ -86,7 +80,7 @@ void Entity::load(const char *filepath)
         }
     }
 
-    for (auto& node : m_nodes) {
+    for (auto &node : m_nodes) {
         if (!node->parent) {
             m_rootNodes.push_back(node.get());
         }

@@ -34,8 +34,7 @@ void Renderer::render(const Entity *entity, const glm::mat4 &worldMatrix)
     m_shaderProgram->bind();
     m_shaderProgram->setUniform("lightPosition", glm::vec3(0, 0, 12));
     m_shaderProgram->setUniform("color", glm::vec3(1));
-    for (const auto *node : entity->m_rootNodes)
-    {
+    for (const auto *node : entity->m_rootNodes) {
         render(node, worldMatrix);
     }
 }
@@ -44,8 +43,7 @@ void Renderer::render(const Entity::Node *node, const glm::mat4 &parentWorldMatr
 {
     const auto localMatrix = node->transform.matrix();
     const auto worldMatrix = parentWorldMatrix * localMatrix;
-    if (auto mesh = node->mesh.get())
-    {
+    if (auto mesh = node->mesh.get()) {
         const auto mvp = m_projectionMatrix * m_viewMatrix * worldMatrix;
         const auto normalMatrix = glm::transpose(glm::inverse(glm::mat3(m_viewMatrix * worldMatrix)));
         m_shaderProgram->setUniform("mvp", mvp);
@@ -53,8 +51,7 @@ void Renderer::render(const Entity::Node *node, const glm::mat4 &parentWorldMatr
         m_shaderProgram->setUniform("normalMatrix", normalMatrix);
         mesh->render();
     }
-    for (const auto *child : node->children)
-    {
+    for (const auto *child : node->children) {
         render(child, worldMatrix);
     }
 }

@@ -20,7 +20,7 @@ public:
     void render(const Entity *entity, const glm::mat4 &worldMatrix);
 
 private:
-    void render(const Entity::Node *node, const glm::mat4& worldMatrix);
+    void render(const Entity::Node *node, const glm::mat4 &worldMatrix);
 
     glm::mat4 m_projectionMatrix;
     glm::mat4 m_viewMatrix;

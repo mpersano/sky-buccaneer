@@ -1,8 +1,8 @@
 #include "world.h"
 
+#include "entity.h"
 #include "panic.h"
 #include "renderer.h"
-#include "entity.h"
 
 #include <GL/glew.h>
 
