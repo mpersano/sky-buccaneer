@@ -1,10 +1,10 @@
 #pragma once
 
-#include "entity.h"
-
 #include <glm/glm.hpp>
 
 #include <memory>
+
+class Mesh;
 
 namespace GL {
 class ShaderProgram;
@@ -17,11 +17,12 @@ public:
     ~Renderer();
 
     void resize(int width, int height);
-    void render(const Entity *entity, const glm::mat4 &worldMatrix);
+
+    void begin();
+    void render(const Mesh *mesh, const glm::mat4 &worldMatrix);
+    void end();
 
 private:
-    void render(const Entity::Node *node, const glm::mat4 &worldMatrix);
-
     glm::mat4 m_projectionMatrix;
     glm::mat4 m_viewMatrix;
     std::unique_ptr<GL::ShaderProgram> m_shaderProgram;

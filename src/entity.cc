@@ -2,6 +2,7 @@
 
 #include "mesh.h"
 #include "panic.h"
+#include "renderer.h"
 #include "shaderprogram.h"
 
 #include <algorithm>
@@ -84,5 +85,24 @@ void Entity::load(const char *filepath)
         if (!node->parent) {
             m_rootNodes.push_back(node.get());
         }
+    }
+}
+
+void Entity::render(Renderer *renderer, const glm::mat4 &worldMatrix) const
+{
+    for (const auto *node : m_rootNodes) {
+        node->render(renderer, worldMatrix);
+    }
+}
+
+void Entity::Node::render(Renderer *renderer, const glm::mat4 &parentWorldMatrix) const
+{
+    const auto localMatrix = transform.matrix();
+    const auto worldMatrix = parentWorldMatrix * localMatrix;
+    if (auto m = mesh.get()) {
+        renderer->render(m, worldMatrix);
+    }
+    for (const auto *child : children) {
+        child->render(renderer, worldMatrix);
     }
 }

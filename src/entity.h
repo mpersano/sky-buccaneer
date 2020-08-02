@@ -6,14 +6,20 @@
 #include "transform.h"
 
 class Mesh;
+class Renderer;
 
-struct Entity {
+class Entity
+{
+public:
     ~Entity();
 
     void load(const char *filepath);
+    void render(Renderer *renderer, const glm::mat4 &worldMatrix) const;
 
+private:
     struct Node {
         ~Node();
+        void render(Renderer *renderer, const glm::mat4 &parentWorldMatrix) const;
         Transform transform;
         const Node *parent = nullptr;
         std::vector<const Node *> children;

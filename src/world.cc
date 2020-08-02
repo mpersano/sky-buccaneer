@@ -33,7 +33,10 @@ void World::render() const
 
     auto modelMatrix = glm::rotate(glm::mat4(1), 3.0f * static_cast<float>(m_time), glm::vec3(-1, -0.5, 1));
     modelMatrix = glm::scale(modelMatrix, glm::vec3(0.8f));
-    m_renderer->render(m_entity.get(), modelMatrix);
+
+    m_renderer->begin();
+    m_entity->render(m_renderer.get(), modelMatrix);
+    m_renderer->end();
 }
 
 void World::update(double elapsed)
