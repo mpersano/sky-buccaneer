@@ -8,6 +8,7 @@ set(GAME_SOURCES
     world.cc
     entity.cc
     transform.cc
+    transformutils.cc
     renderer.cc
 )
 

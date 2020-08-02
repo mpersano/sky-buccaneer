@@ -16,7 +16,7 @@ Renderer::Renderer()
     m_shaderProgram->link();
 
     // XXX
-    const auto eye = glm::vec3(0, 0, 4);
+    const auto eye = glm::vec3(8, 0, 0);
     const auto center = glm::vec3(0, 0, 0);
     const auto up = glm::vec3(0, 1, 0);
     m_viewMatrix = glm::lookAt(eye, center, up);
@@ -36,11 +36,11 @@ void Renderer::begin()
 void Renderer::render(const Mesh *mesh, const glm::mat4 &worldMatrix)
 {
     m_shaderProgram->bind();
-    m_shaderProgram->setUniform("lightPosition", glm::vec3(0, 0, 12));
+    m_shaderProgram->setUniform("lightPosition", glm::vec3(8, 0, 0));
     m_shaderProgram->setUniform("color", glm::vec3(1));
 
     const auto mvp = m_projectionMatrix * m_viewMatrix * worldMatrix;
-    const auto normalMatrix = glm::transpose(glm::inverse(glm::mat3(m_viewMatrix * worldMatrix)));
+    const auto normalMatrix = glm::transpose(glm::inverse(glm::mat3(worldMatrix)));
 
     m_shaderProgram->setUniform("mvp", mvp);
     m_shaderProgram->setUniform("modelMatrix", worldMatrix);

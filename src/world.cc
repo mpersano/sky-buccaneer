@@ -31,11 +31,15 @@ void World::render() const
 {
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
+#if 0
     auto modelMatrix = glm::rotate(glm::mat4(1), 3.0f * static_cast<float>(m_time), glm::vec3(-1, -0.5, 1));
     modelMatrix = glm::scale(modelMatrix, glm::vec3(0.8f));
+#else
+    const auto modelMatrix = glm::mat4(1);
+#endif
 
     m_renderer->begin();
-    m_entity->render(m_renderer.get(), modelMatrix);
+    m_entity->render(m_renderer.get(), modelMatrix, fmod(6.0f * m_time, 21.0f));
     m_renderer->end();
 }
 
