@@ -27,6 +27,9 @@ def write_entity(filepath, context):
         def write_vec4(value):
             outfile.write(struct.pack('<4f', *value))
 
+        def write_quat(value):
+            outfile.write(struct.pack('<4f', value.x, value.y, value.z, value.w))
+
         def write_mat4(value):
             for v in value:
                 write_vec4(v)
@@ -55,11 +58,7 @@ def write_entity(filepath, context):
             write_int8(is_mesh)
             translation, rotation, scale = obj.matrix_local.decompose()
             write_vec3(translation)
-            # write_vec4(rotation)
-            write_float(rotation.x)
-            write_float(rotation.y)
-            write_float(rotation.z)
-            write_float(rotation.w)
+            write_quat(rotation)
             write_vec3(scale)
             children = [o for o in obj.children if o in objects]
             write_int32(len(children))
@@ -80,6 +79,7 @@ class Area13EntityExporter(bpy.types.Operator, ExportHelper):
         return {'FINISHED'}
 
 def register():
+    print('registered!')
     bpy.utils.register_class(Area13EntityExporter)
 
 def unregister():
