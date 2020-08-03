@@ -3,13 +3,15 @@
 #include "entity.h"
 #include "panic.h"
 #include "renderer.h"
+#include "shadermanager.h"
 
 #include <GL/glew.h>
 
 #include <fstream>
 
 World::World()
-    : m_renderer(new Renderer)
+    : m_shaderManager(new ShaderManager)
+    , m_renderer(new Renderer(m_shaderManager.get()))
     , m_entity(new Entity)
 {
     m_entity->load("assets/meshes/scene.bin");

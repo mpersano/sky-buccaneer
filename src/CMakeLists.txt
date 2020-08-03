@@ -12,6 +12,7 @@ set(GAME_SOURCES
     renderer.cc
     shadowbuffer.cc
     camera.cc
+    shadermanager.cc
 )
 
 add_executable(game ${GAME_SOURCES})

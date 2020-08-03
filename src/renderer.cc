@@ -1,6 +1,7 @@
 #include "renderer.h"
 
 #include "mesh.h"
+#include "shadermanager.h"
 #include "shaderprogram.h"
 #include "shadowbuffer.h"
 
@@ -9,21 +10,10 @@
 
 #include <iostream>
 
-Renderer::Renderer()
-    : m_shaderPhong(new GL::ShaderProgram)
-    , m_shaderShadow(new GL::ShaderProgram)
-    , m_shadowBuffer(new GL::ShadowBuffer(1024, 1024))
+Renderer::Renderer(ShaderManager *shaderManager)
+    : m_shadowBuffer(new GL::ShadowBuffer(1024, 1024))
+    , m_shaderManager(shaderManager)
 {
-    // XXX move these to shader manager
-
-    m_shaderPhong->addShader(GL_VERTEX_SHADER, "assets/shaders/phong.vert");
-    m_shaderPhong->addShader(GL_FRAGMENT_SHADER, "assets/shaders/phong.frag");
-    m_shaderPhong->link();
-
-    m_shaderShadow->addShader(GL_VERTEX_SHADER, "assets/shaders/shadow.vert");
-    m_shaderShadow->addShader(GL_FRAGMENT_SHADER, "assets/shaders/shadow.frag");
-    m_shaderShadow->link();
-
     m_camera.setEye(glm::vec3(8, 0, 0));
     m_lightPosition = glm::vec3(7, 4, -4);
 }
@@ -69,15 +59,15 @@ void Renderer::end()
             glm::perspective(glm::radians(45.0f), static_cast<float>(m_shadowBuffer->width()) / m_shadowBuffer->height(), 1.0f, 50.f);
     const auto lightView = glm::lookAt(m_lightPosition, m_camera.center(), glm::vec3(0, 1, 0));
 
-    m_shaderShadow->bind();
-    m_shaderShadow->setUniform("viewMatrix", lightView);
-    m_shaderShadow->setUniform("projectionMatrix", lightProjection);
+    m_shaderManager->useProgram(ShaderManager::Shadow);
+    m_shaderManager->setUniform(ShaderManager::ViewMatrix, lightView);
+    m_shaderManager->setUniform(ShaderManager::ProjectionMatrix, lightProjection);
 
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(4, 4);
 
     for (const auto &drawCall : m_drawCalls) {
-        m_shaderShadow->setUniform("modelMatrix", drawCall.worldMatrix);
+        m_shaderManager->setUniform(ShaderManager::ModelMatrix, drawCall.worldMatrix);
         drawCall.mesh->render();
     }
 
@@ -89,20 +79,20 @@ void Renderer::end()
     glViewport(0, 0, m_width, m_height);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    m_shaderPhong->bind();
-    m_shaderPhong->setUniform("lightPosition", m_lightPosition);
-    m_shaderPhong->setUniform("eyePosition", m_camera.eye());
-    m_shaderPhong->setUniform("shadowMapTexture", 0);
-    m_shaderPhong->setUniform("projectionMatrix", m_projectionMatrix);
-    m_shaderPhong->setUniform("viewMatrix", m_camera.viewMatrix());
-    m_shaderPhong->setUniform("lightViewProjection", lightProjection * lightView);
+    m_shaderManager->useProgram(ShaderManager::Phong);
+    m_shaderManager->setUniform(ShaderManager::LightPosition, m_lightPosition);
+    m_shaderManager->setUniform(ShaderManager::EyePosition, m_camera.eye());
+    m_shaderManager->setUniform(ShaderManager::ShadowMapTexture, 0);
+    m_shaderManager->setUniform(ShaderManager::ProjectionMatrix, m_projectionMatrix);
+    m_shaderManager->setUniform(ShaderManager::ViewMatrix, m_camera.viewMatrix());
+    m_shaderManager->setUniform(ShaderManager::LightViewProjection, lightProjection * lightView);
 
     m_shadowBuffer->bindTexture();
 
     for (const auto &drawCall : m_drawCalls) {
         const auto normalMatrix = glm::transpose(glm::inverse(glm::mat3(drawCall.worldMatrix)));
-        m_shaderPhong->setUniform("modelMatrix", drawCall.worldMatrix);
-        m_shaderPhong->setUniform("normalMatrix", normalMatrix);
+        m_shaderManager->setUniform(ShaderManager::ModelMatrix, drawCall.worldMatrix);
+        m_shaderManager->setUniform(ShaderManager::NormalMatrix, normalMatrix);
         drawCall.mesh->render();
     }
 }
