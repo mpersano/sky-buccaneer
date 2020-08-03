@@ -3,8 +3,8 @@
 namespace GL {
 
 ShadowBuffer::ShadowBuffer(int width, int height)
-    : m_width{ width }
-    , m_height{ height }
+    : m_width(width)
+    , m_height(height)
 {
     glGenTextures(1, &m_textureId);
     glGenFramebuffers(1, &m_fboId);
