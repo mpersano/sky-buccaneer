@@ -1,13 +1,10 @@
 #include "world.h"
 
 #include "entity.h"
-#include "panic.h"
 #include "renderer.h"
 #include "shadermanager.h"
 
 #include <GL/glew.h>
-
-#include <fstream>
 
 World::World()
     : m_shaderManager(new ShaderManager)
@@ -41,7 +38,7 @@ void World::render() const
 #endif
 
     m_renderer->begin();
-    m_entity->render(m_renderer.get(), modelMatrix, fmod(6.0f * m_time, 21.0f));
+    m_entity->render(m_renderer.get(), modelMatrix, std::fmod(6.0f * m_time, 21.0f));
     m_renderer->end();
 }
 
