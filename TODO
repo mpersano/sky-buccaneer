@@ -1,0 +1,12 @@
+* export blender animations
+  * on renderer: initially assume 1:1 node/action mapping
+    v update EntityFile.txt doc
+    v update exporter
+    * update importer
+    * render (add frame parameter to Entity::render)
+  * figure when one action can affect multiple nodes
+  * figure out when multiple actions can affect the same node or groups of nodes
+v better shader
+v shadow mapping
+v animated gif
+v batch meshes in renderer
