@@ -86,7 +86,9 @@ def write_entity(filepath, context):
                 write_int32(start_frame)
                 write_int32(end_frame)
                 for frame in range(start_frame, end_frame + 1):
-                    sample = [fcurve.evaluate(frame) for fcurve in fcurves]
+                    sample = [0] * 3
+                    for fcurve in fcurves:
+                        sample[fcurve.array_index] = fcurve.evaluate(frame)
                     print('frame=%d, sample=%s' % (frame, sample))
                     write_sample(sample)
 
