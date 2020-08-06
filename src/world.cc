@@ -12,6 +12,7 @@ World::World()
     , m_entity(new Entity)
 {
     m_entity->load("assets/meshes/scene.bin");
+    m_entity->setActiveAction("Empty", "TestAction");
 
     glClearColor(0, 0, 0, 0);
     glEnable(GL_CULL_FACE);

@@ -35,6 +35,10 @@ def write_entity(filepath, context):
             for v in value:
                 write_vec4(v)
 
+        def write_string(value):
+            write_int8(len(value))
+            outfile.write(value.encode('ascii'))
+
         def write_mesh(mesh):
             vertices = mesh.vertices[:]
             write_int32(len(vertices))
@@ -53,7 +57,7 @@ def write_entity(filepath, context):
                     write_int32(poly.vertices[i])
                     write_int32(poly.vertices[i + 1])
 
-        def write_action(target_node, action):
+        def write_action(action):
             RotationChannel = 0
             TranslationChannel = 1
             ScaleChannel = 2
@@ -71,10 +75,11 @@ def write_entity(filepath, context):
                 channel_count += 1
 
             print('Exporting action `%s` (%d channels)' % (action.name, channel_count))
+
+            write_string(action.name)
             write_int32(channel_count)
 
             def write_channel(path_type, fcurves, write_sample):
-                write_int32(target_node)
                 write_int8(path_type)
                 start_frame = int(min(fcurve.range()[0] for fcurve in fcurves))
                 end_frame = int(max(fcurve.range()[1] for fcurve in fcurves))
@@ -94,7 +99,9 @@ def write_entity(filepath, context):
 
         write_int32(len(objects))
         for obj in objects:
+            print('Exporting object `%s`' % obj.name)
             is_mesh = obj.type == 'MESH'
+            write_string(obj.name)
             write_int8(is_mesh)
             translation, rotation, scale = obj.matrix_local.decompose()
             write_vec3(translation)
@@ -104,15 +111,20 @@ def write_entity(filepath, context):
             write_int32(len(children))
             for child in children:
                 write_int32(objects.index(child))
+            actions = []
+            if obj.animation_data is not None:
+                if obj.animation_data.action is not None:
+                    actions.append(obj.animation_data.action)
+                for track in obj.animation_data.nla_tracks:
+                    for strip in track.strips:
+                        if strip.action is not None and strip.mute is False:
+                            actions.append(strip.action)
+                actions = list(set(actions))
+            write_int32(len(actions))
+            for action in actions:
+                write_action(action)
             if is_mesh:
                 write_mesh(obj.data)
-
-        actions = [(o, o.animation_data.action) for o in objects if o.animation_data is not None and o.animation_data.action is not None]
-        print('Exporting %d actions' % len(actions))
-
-        write_int32(len(actions))
-        for obj, action in actions:
-            write_action(objects.index(obj), action)
 
 class Area13EntityExporter(bpy.types.Operator, ExportHelper):
     bl_idname = "export_scene.a13"

@@ -23,6 +23,16 @@ T read(std::istream &is)
     return value;
 }
 
+template<>
+std::string read(std::istream &is)
+{
+    const int length = read<uint8_t>(is);
+    std::string s;
+    s.resize(length);
+    is.read(s.data(), length);
+    return s;
+}
+
 std::unique_ptr<Mesh> readMesh(std::istream &is)
 {
     const auto vertexCount = read<uint32_t>(is);
@@ -64,11 +74,17 @@ void Entity::load(const char *filepath)
         return std::make_unique<Node>();
     });
     for (auto &node : m_nodes) {
+        node->name = read<std::string>(is);
+        std::cout << "Reading node `" << node->name << "'\n";
+
         enum class NodeType { Empty,
                               Mesh };
         const auto nodeType = static_cast<NodeType>(read<uint8_t>(is));
+
         node->transform = read<Transform>(is);
+
         const auto childCount = read<uint32_t>(is);
+        node->children.reserve(childCount);
         for (int i = 0; i < childCount; ++i) {
             const auto childIndex = read<uint32_t>(is);
             panicUnless(childIndex < m_nodes.size());
@@ -77,6 +93,56 @@ void Entity::load(const char *filepath)
             child->parent = node.get();
             node->children.push_back(child);
         }
+
+        const auto actionCount = read<uint32_t>(is);
+        std::cout << "Reading " << actionCount << " actions\n";
+        node->actions.reserve(actionCount);
+        for (int i = 0; i < actionCount; ++i) {
+            std::unique_ptr<Action> action(new Action);
+            action->name = read<std::string>(is);
+            std::cout << "Reading action `" << action->name << "'\n";
+            const auto channelCount = read<uint32_t>(is);
+            std::cout << "Reading " << channelCount << " channels\n";
+            for (int j = 0; j < channelCount; ++j) {
+                enum class PathType { Rotation,
+                                      Translation,
+                                      Scale };
+                const auto pathType = static_cast<PathType>(read<uint8_t>(is));
+                auto startFrame = read<uint32_t>(is);
+                auto endFrame = read<uint32_t>(is);
+                switch (pathType) {
+                case PathType::Rotation: {
+                    RotationChannel channel;
+                    channel.startFrame = startFrame;
+                    std::generate_n(std::back_inserter(channel.samples), endFrame - startFrame + 1, [&is] {
+                        return read<glm::quat>(is);
+                    });
+                    action->rotationChannel = channel;
+                    break;
+                }
+                case PathType::Translation: {
+                    TranslationChannel channel;
+                    channel.startFrame = startFrame;
+                    std::generate_n(std::back_inserter(channel.samples), endFrame - startFrame + 1, [&is] {
+                        return read<glm::vec3>(is);
+                    });
+                    action->translationChannel = channel;
+                    break;
+                }
+                case PathType::Scale: {
+                    ScaleChannel channel;
+                    channel.startFrame = startFrame;
+                    std::generate_n(std::back_inserter(channel.samples), endFrame - startFrame + 1, [&is] {
+                        return read<glm::vec3>(is);
+                    });
+                    action->scaleChannel = channel;
+                    break;
+                }
+                }
+            }
+            node->actions.push_back(std::move(action));
+        }
+
         if (nodeType == NodeType::Mesh) {
             node->mesh = readMesh(is);
         }
@@ -87,51 +153,6 @@ void Entity::load(const char *filepath)
             m_rootNodes.push_back(node.get());
         }
     }
-
-    const auto actionCount = read<uint32_t>(is);
-    for (int i = 0; i < actionCount; ++i) {
-        const auto channelCount = read<uint32_t>(is);
-        for (int j = 0; j < channelCount; ++j) {
-            auto targetNodeIndex = read<uint32_t>(is);
-            panicUnless(targetNodeIndex < m_nodes.size());
-            auto &targetNode = m_nodes[targetNodeIndex];
-            enum class PathType { Rotation,
-                                  Translation,
-                                  Scale };
-            const auto pathType = static_cast<PathType>(read<uint8_t>(is));
-            auto startFrame = read<uint32_t>(is);
-            auto endFrame = read<uint32_t>(is);
-            switch (pathType) {
-            case PathType::Rotation: {
-                RotationChannel channel;
-                channel.startFrame = startFrame;
-                std::generate_n(std::back_inserter(channel.samples), endFrame - startFrame + 1, [&is] {
-                    return read<glm::quat>(is);
-                });
-                targetNode->rotationChannel = channel;
-                break;
-            }
-            case PathType::Translation: {
-                TranslationChannel channel;
-                channel.startFrame = startFrame;
-                std::generate_n(std::back_inserter(channel.samples), endFrame - startFrame + 1, [&is] {
-                    return read<glm::vec3>(is);
-                });
-                targetNode->translationChannel = channel;
-                break;
-            }
-            case PathType::Scale: {
-                ScaleChannel channel;
-                channel.startFrame = startFrame;
-                std::generate_n(std::back_inserter(channel.samples), endFrame - startFrame + 1, [&is] {
-                    return read<glm::vec3>(is);
-                });
-                targetNode->scaleChannel = channel;
-                break;
-            }
-            }
-        }
-    }
 }
 
 void Entity::render(Renderer *renderer, const glm::mat4 &worldMatrix, float frame) const
@@ -139,6 +160,26 @@ void Entity::render(Renderer *renderer, const glm::mat4 &worldMatrix, float fram
     for (const auto *node : m_rootNodes) {
         node->render(renderer, worldMatrix, frame);
     }
+}
+
+bool Entity::setActiveAction(std::string_view nodeName, std::string_view actionName)
+{
+    auto nodeIt = std::find_if(m_nodes.begin(), m_nodes.end(), [&nodeName](auto &node) {
+        return node->name == nodeName;
+    });
+    if (nodeIt == m_nodes.end()) {
+        return false;
+    }
+    auto &node = *nodeIt;
+    auto &actions = node->actions;
+    auto actionIt = std::find_if(actions.begin(), actions.end(), [&actionName](auto &action) {
+        return action->name == actionName;
+    });
+    if (actionIt == actions.end()) {
+        return false;
+    }
+    node->activeAction = actionIt->get();
+    return true;
 }
 
 template<typename ChannelT>
@@ -161,14 +202,16 @@ auto sampleAt(const ChannelT &channel, float frame)
 void Entity::Node::render(Renderer *renderer, const glm::mat4 &parentWorldMatrix, float frame) const
 {
     auto [translation, rotation, scale] = transform;
-    if (translationChannel) {
-        translation = sampleAt(*translationChannel, frame);
-    }
-    if (rotationChannel) {
-        rotation = sampleAt(*rotationChannel, frame);
-    }
-    if (scaleChannel) {
-        scale = sampleAt(*scaleChannel, frame);
+    if (activeAction) {
+        if (activeAction->translationChannel) {
+            translation = sampleAt(*activeAction->translationChannel, frame);
+        }
+        if (activeAction->rotationChannel) {
+            rotation = sampleAt(*activeAction->rotationChannel, frame);
+        }
+        if (activeAction->scaleChannel) {
+            scale = sampleAt(*activeAction->scaleChannel, frame);
+        }
     }
     const auto localMatrix = composeTransformMatrix(translation, rotation, scale);
     const auto worldMatrix = parentWorldMatrix * localMatrix;

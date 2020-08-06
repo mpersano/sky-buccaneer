@@ -1,6 +1,12 @@
 Entity File Structure
 =====================
 
+struct String
+{
+    char8_t length;
+    char[] data;
+};
+
 struct Vertex
 {
     glm::vec3 position;
@@ -29,7 +35,6 @@ struct Transform
 
 struct Channel
 {
-    uint32_t targetNode;
     enum class PathType : uint8_t
     {
         Rotation = 0,
@@ -39,17 +44,19 @@ struct Channel
     PathType path;
     uint32_t startFrame;
     uint32_t endFrame;
-    chat data[]; // list of glm::vec3 for path=Scale/Translation or glm::quat for path=Rotation
+    char data[]; // list of glm::vec3 for path=Scale/Translation or glm::quat for path=Rotation
 };
 
 struct Action
 {
+    String name;
     uint32_t channelCount;
     Channel channels[];
 };
 
 struct Node
 {
+    String name;
 	enum Type : uint8_t
 	{
 		Empty = 0,
