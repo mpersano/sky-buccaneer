@@ -18,8 +18,9 @@ public:
     ShaderProgram();
     ~ShaderProgram();
 
-    void addShader(GLenum type, const std::string &path);
-    void link();
+    bool addShader(GLenum type, const std::string &path);
+    bool link();
+    const std::string &log() const;
 
     void bind() const;
 
@@ -47,6 +48,7 @@ public:
 
 private:
     GLuint m_id;
+    std::string m_log;
 };
 
 } // namespace GL

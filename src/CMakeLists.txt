@@ -31,4 +31,5 @@ PUBLIC
     ${GLEW_LIBRARIES}
     glm
     glfw
+    spdlog
 )

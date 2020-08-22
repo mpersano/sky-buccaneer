@@ -1,12 +1,9 @@
-/*
- * Copyright 2020. Hancom Inc. All rights reserved.
- *
- * http://www.hancom.com/
- */
-
 #include "shadermanager.h"
 
+#include <iostream>
 #include <type_traits>
+
+#include <spdlog/spdlog.h>
 
 namespace {
 
@@ -27,9 +24,18 @@ loadProgram(ShaderManager::Program id)
     static_assert(std::extent_v<decltype(programSources)> == ShaderManager::NumPrograms, "expected number of programs to match");
     const auto &sources = programSources[id];
     std::unique_ptr<GL::ShaderProgram> program(new GL::ShaderProgram);
-    program->addShader(GL_VERTEX_SHADER, sources.vertexShader);
-    program->addShader(GL_FRAGMENT_SHADER, sources.fragmentShader);
-    program->link();
+    if (!program->addShader(GL_VERTEX_SHADER, sources.vertexShader)) {
+        spdlog::warn("Failed to add vertex shader for program {}: {}", id, program->log());
+        return {};
+    }
+    if (!program->addShader(GL_FRAGMENT_SHADER, sources.fragmentShader)) {
+        spdlog::warn("Failed to add fragment shader for program {}: {}", id, program->log());
+        return {};
+    }
+    if (!program->link()) {
+        spdlog::warn("Failed to link program {}: {}", id, program->log());
+        return {};
+    }
     return program;
 }
 

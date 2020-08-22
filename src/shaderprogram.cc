@@ -1,9 +1,10 @@
 #include "shaderprogram.h"
 
-#include "panic.h"
-
 #include <array>
 #include <fstream>
+#include <memory>
+#include <optional>
+#include <sstream>
 
 #include <glm/gtc/type_ptr.hpp>
 
@@ -11,11 +12,11 @@ namespace GL {
 
 namespace {
 
-std::vector<char> readFile(const std::string &path)
+std::optional<std::vector<char>> readFile(const std::string &path)
 {
     std::ifstream file(path);
     if (!file.is_open())
-        panic("failed to open %s\n", std::string(path).c_str());
+        return {};
 
     auto *buf = file.rdbuf();
 
@@ -43,36 +44,67 @@ ShaderProgram::~ShaderProgram()
     glDeleteProgram(m_id);
 }
 
-void ShaderProgram::addShader(GLenum type, const std::string &filename)
+bool ShaderProgram::addShader(GLenum type, const std::string &filename)
 {
     const auto source = readFile(filename);
-
-    const auto shader_id = glCreateShader(type);
-
-    const auto sourcePtr = source.data();
-    glShaderSource(shader_id, 1, &sourcePtr, nullptr);
-    glCompileShader(shader_id);
-
-    int status;
-    glGetShaderiv(shader_id, GL_COMPILE_STATUS, &status);
-    if (!status) {
-        std::array<GLchar, 64 * 1024> buf;
-        GLsizei length;
-        glGetShaderInfoLog(shader_id, buf.size() - 1, &length, buf.data());
-        panic("failed to compile shader %s:\n%.*s", std::string(filename).c_str(), length, buf.data());
+    if (!source) {
+        std::stringstream ss;
+        ss << "Failed to load " << filename;
+        m_log = ss.str();
+        return false;
     }
 
-    glAttachShader(m_id, shader_id);
+    const auto shader = glCreateShader(type);
+
+    const auto sourcePtr = source->data();
+    glShaderSource(shader, 1, &sourcePtr, nullptr);
+    glCompileShader(shader);
+
+    GLint status;
+    glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+    if (status == GL_FALSE) {
+        m_log.clear();
+        GLint logLength = 0;
+        glGetShaderiv(shader, GL_INFO_LOG_LENGTH, &logLength);
+        if (logLength > 1) {
+            auto buffer = std::make_unique<char[]>(logLength);
+            GLsizei dummy;
+            glGetShaderInfoLog(shader, logLength, &dummy, buffer.get());
+            m_log = buffer.get();
+        }
+        return false;
+    }
+
+    glAttachShader(m_id, shader);
+
+    return true;
 }
 
-void ShaderProgram::link()
+bool ShaderProgram::link()
 {
     glLinkProgram(m_id);
 
-    int status;
+    GLint status;
     glGetProgramiv(m_id, GL_LINK_STATUS, &status);
-    if (!status)
-        panic("failed to link shader program\n");
+    if (status == GL_FALSE) {
+        m_log.clear();
+        GLint logLength;
+        glGetProgramiv(m_id, GL_INFO_LOG_LENGTH, &logLength);
+        if (logLength > 1) {
+            auto buffer = std::make_unique<char[]>(logLength);
+            GLsizei dummy;
+            glGetProgramInfoLog(m_id, logLength, &dummy, buffer.get());
+            m_log = buffer.get();
+        }
+        return false;
+    }
+
+    return true;
+}
+
+const std::string &ShaderProgram::log() const
+{
+    return m_log;
 }
 
 void ShaderProgram::bind() const
