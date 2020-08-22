@@ -18,7 +18,7 @@ class ShaderManager;
 class Renderer
 {
 public:
-    Renderer(ShaderManager *shaderManager);
+    Renderer(ShaderManager *shaderManager, const Camera *camera);
     ~Renderer();
 
     void resize(int width, int height);
@@ -30,7 +30,6 @@ public:
 private:
     int m_width = 1;
     int m_height = 1;
-    Camera m_camera;
     glm::vec3 m_lightPosition;
     std::unique_ptr<GL::ShadowBuffer> m_shadowBuffer;
     struct DrawCall {
@@ -39,4 +38,5 @@ private:
     };
     std::vector<DrawCall> m_drawCalls;
     ShaderManager *m_shaderManager;
+    const Camera *m_camera;
 };

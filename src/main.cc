@@ -1,3 +1,4 @@
+#include "inputstate.h"
 #include "noncopyable.h"
 #include "panic.h"
 #include "world.h"
@@ -26,6 +27,7 @@ private:
 
     GLFWwindow *m_window = nullptr;
     std::unique_ptr<World> m_world;
+    InputState m_inputState = InputState::None;
 };
 
 GameWindow::GameWindow(int width, int height, const char *title)
@@ -78,7 +80,7 @@ void GameWindow::renderLoop()
         elapsed = now - curTime;
         curTime = now;
 
-        m_world->update(elapsed);
+        m_world->update(m_inputState, elapsed);
         m_world->render();
 
         glfwSwapBuffers(m_window);
@@ -107,8 +109,27 @@ void GameWindow::sizeCallback(GLFWwindow *window, int width, int height)
 
 void GameWindow::key(int key, int scancode, int action, int mode)
 {
-    if (key == GLFW_KEY_ESCAPE && action == GLFW_PRESS) {
-        glfwSetWindowShouldClose(m_window, 1);
+    switch (key) {
+    case GLFW_KEY_ESCAPE:
+        if (action == GLFW_PRESS)
+            glfwSetWindowShouldClose(m_window, 1);
+        break;
+#define UPDATE_INPUT_STATE(key, state)          \
+    case key:                                   \
+        if (action == GLFW_PRESS)               \
+            m_inputState |= InputState::state;  \
+        else if (action == GLFW_RELEASE)        \
+            m_inputState &= ~InputState::state; \
+        break;
+        UPDATE_INPUT_STATE(GLFW_KEY_LEFT, Left)
+        UPDATE_INPUT_STATE(GLFW_KEY_RIGHT, Right)
+        UPDATE_INPUT_STATE(GLFW_KEY_UP, Up)
+        UPDATE_INPUT_STATE(GLFW_KEY_DOWN, Down)
+        UPDATE_INPUT_STATE(GLFW_KEY_A, Forward)
+        UPDATE_INPUT_STATE(GLFW_KEY_Z, Reverse)
+#undef UPDATE_INPUT_STATE
+    default:
+        break;
     }
 }
 

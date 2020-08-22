@@ -10,11 +10,11 @@
 
 #include <iostream>
 
-Renderer::Renderer(ShaderManager *shaderManager)
+Renderer::Renderer(ShaderManager *shaderManager, const Camera *camera)
     : m_shadowBuffer(new GL::ShadowBuffer(1024, 1024))
     , m_shaderManager(shaderManager)
+    , m_camera(camera)
 {
-    m_camera.setEye(glm::vec3(8, 0, 0));
     m_lightPosition = glm::vec3(7, 4, -4);
 }
 
@@ -24,7 +24,6 @@ void Renderer::resize(int width, int height)
 {
     m_width = width;
     m_height = height;
-    m_camera.setAspectRatio(static_cast<float>(width) / height);
 }
 
 void Renderer::begin()
@@ -57,7 +56,7 @@ void Renderer::end()
     const auto lightProjection =
             // glm::ortho(-HalfWidth, HalfWidth, -HalfHeight, HalfHeight, ZNear, ZFar);
             glm::perspective(glm::radians(45.0f), static_cast<float>(m_shadowBuffer->width()) / m_shadowBuffer->height(), 1.0f, 50.f);
-    const auto lightView = glm::lookAt(m_lightPosition, m_camera.center(), glm::vec3(0, 1, 0));
+    const auto lightView = glm::lookAt(m_lightPosition, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
 
     m_shaderManager->useProgram(ShaderManager::Shadow);
     m_shaderManager->setUniform(ShaderManager::ViewMatrix, lightView);
@@ -81,10 +80,10 @@ void Renderer::end()
 
     m_shaderManager->useProgram(ShaderManager::Phong);
     m_shaderManager->setUniform(ShaderManager::LightPosition, m_lightPosition);
-    m_shaderManager->setUniform(ShaderManager::EyePosition, m_camera.eye());
+    m_shaderManager->setUniform(ShaderManager::EyePosition, m_camera->eye());
     m_shaderManager->setUniform(ShaderManager::ShadowMapTexture, 0);
-    m_shaderManager->setUniform(ShaderManager::ProjectionMatrix, m_camera.projectionMatrix());
-    m_shaderManager->setUniform(ShaderManager::ViewMatrix, m_camera.viewMatrix());
+    m_shaderManager->setUniform(ShaderManager::ProjectionMatrix, m_camera->projectionMatrix());
+    m_shaderManager->setUniform(ShaderManager::ViewMatrix, m_camera->viewMatrix());
     m_shaderManager->setUniform(ShaderManager::LightViewProjection, lightProjection * lightView);
 
     m_shadowBuffer->bindTexture();
