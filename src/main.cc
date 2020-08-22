@@ -36,7 +36,7 @@ GameWindow::GameWindow(int width, int height, const char *title)
     });
 
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 4);
-    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
+    glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
     m_window = glfwCreateWindow(width, height, title, nullptr, nullptr);
 
@@ -52,8 +52,8 @@ GameWindow::GameWindow(int width, int height, const char *title)
         panic("Failed to initialize GLEW: %s\n", glewGetErrorString(error));
     }
 
-    if (!glewIsSupported("GL_VERSION_4_3")) {
-        panic("OpenGL 4.3 not supported\n");
+    if (!glewIsSupported("GL_VERSION_4_2")) {
+        panic("OpenGL 4.2 not supported\n");
     }
 
     glEnable(GL_DEBUG_OUTPUT);
