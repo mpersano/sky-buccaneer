@@ -23,8 +23,6 @@ target_include_directories(game
 PUBLIC
     ${OPENGL_INCLUDE_DIR}
     ${GLEW_INCLUDE_DIR}
-    glm
-    glfw
 )
 
 target_link_libraries(game
