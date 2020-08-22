@@ -24,7 +24,7 @@ void Renderer::resize(int width, int height)
 {
     m_width = width;
     m_height = height;
-    m_projectionMatrix = glm::perspective(glm::radians(45.0f), static_cast<float>(width) / height, 0.1f, 100.f);
+    m_camera.setAspectRatio(static_cast<float>(width) / height);
 }
 
 void Renderer::begin()
@@ -83,7 +83,7 @@ void Renderer::end()
     m_shaderManager->setUniform(ShaderManager::LightPosition, m_lightPosition);
     m_shaderManager->setUniform(ShaderManager::EyePosition, m_camera.eye());
     m_shaderManager->setUniform(ShaderManager::ShadowMapTexture, 0);
-    m_shaderManager->setUniform(ShaderManager::ProjectionMatrix, m_projectionMatrix);
+    m_shaderManager->setUniform(ShaderManager::ProjectionMatrix, m_camera.projectionMatrix());
     m_shaderManager->setUniform(ShaderManager::ViewMatrix, m_camera.viewMatrix());
     m_shaderManager->setUniform(ShaderManager::LightViewProjection, lightProjection * lightView);
 

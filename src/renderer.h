@@ -31,7 +31,6 @@ private:
     int m_width = 1;
     int m_height = 1;
     Camera m_camera;
-    glm::mat4 m_projectionMatrix;
     glm::vec3 m_lightPosition;
     std::unique_ptr<GL::ShadowBuffer> m_shadowBuffer;
     struct DrawCall {
