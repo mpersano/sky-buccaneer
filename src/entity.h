@@ -10,6 +10,18 @@
 class Mesh;
 class Renderer;
 
+struct Action {
+    std::string name;
+    template<typename SampleT>
+    struct Channel {
+        int startFrame;
+        std::vector<SampleT> samples;
+    };
+    std::optional<Channel<glm::quat>> rotationChannel;
+    std::optional<Channel<glm::vec3>> translationChannel;
+    std::optional<Channel<glm::vec3>> scaleChannel;
+};
+
 class Entity
 {
 public:
@@ -21,28 +33,6 @@ public:
 
 private:
     struct Node;
-
-    struct RotationChannel {
-        int startFrame;
-        std::vector<glm::quat> samples; // one sample per frame
-    };
-
-    struct TranslationChannel {
-        int startFrame;
-        std::vector<glm::vec3> samples; // ditto
-    };
-
-    struct ScaleChannel {
-        int startFrame;
-        std::vector<glm::vec3> samples; // ditto
-    };
-
-    struct Action {
-        std::string name;
-        std::optional<RotationChannel> rotationChannel;
-        std::optional<TranslationChannel> translationChannel;
-        std::optional<ScaleChannel> scaleChannel;
-    };
 
     struct Node {
         ~Node();

@@ -49,6 +49,46 @@ std::unique_ptr<Mesh> readMesh(std::istream &is)
     return mesh;
 }
 
+template<typename SampleT>
+Action::Channel<SampleT> readChannel(std::istream &is, uint32_t startFrame, uint32_t endFrame)
+{
+    Action::Channel<SampleT> channel;
+    channel.startFrame = startFrame;
+    std::generate_n(std::back_inserter(channel.samples), endFrame - startFrame + 1, [&is] {
+        return read<SampleT>(is);
+    });
+    return channel;
+}
+
+std::unique_ptr<Action> readAction(std::istream &is)
+{
+    std::unique_ptr<Action> action(new Action);
+    action->name = read<std::string>(is);
+    std::cout << "Reading action `" << action->name << "'\n";
+    const auto channelCount = read<uint32_t>(is);
+    std::cout << "Reading " << channelCount << " channels\n";
+    for (int j = 0; j < channelCount; ++j) {
+        enum class PathType { Rotation,
+                              Translation,
+                              Scale };
+        const auto pathType = static_cast<PathType>(read<uint8_t>(is));
+        const auto startFrame = read<uint32_t>(is);
+        const auto endFrame = read<uint32_t>(is);
+        switch (pathType) {
+        case PathType::Rotation:
+            action->rotationChannel = readChannel<glm::quat>(is, startFrame, endFrame);
+            break;
+        case PathType::Translation:
+            action->translationChannel = readChannel<glm::vec3>(is, startFrame, endFrame);
+            break;
+        case PathType::Scale:
+            action->scaleChannel = readChannel<glm::vec3>(is, startFrame, endFrame);
+            break;
+        }
+    }
+    return action;
+}
+
 } // namespace
 
 Entity::~Entity() = default;
@@ -98,49 +138,7 @@ void Entity::load(const char *filepath)
         std::cout << "Reading " << actionCount << " actions\n";
         node->actions.reserve(actionCount);
         for (int i = 0; i < actionCount; ++i) {
-            std::unique_ptr<Action> action(new Action);
-            action->name = read<std::string>(is);
-            std::cout << "Reading action `" << action->name << "'\n";
-            const auto channelCount = read<uint32_t>(is);
-            std::cout << "Reading " << channelCount << " channels\n";
-            for (int j = 0; j < channelCount; ++j) {
-                enum class PathType { Rotation,
-                                      Translation,
-                                      Scale };
-                const auto pathType = static_cast<PathType>(read<uint8_t>(is));
-                auto startFrame = read<uint32_t>(is);
-                auto endFrame = read<uint32_t>(is);
-                switch (pathType) {
-                case PathType::Rotation: {
-                    RotationChannel channel;
-                    channel.startFrame = startFrame;
-                    std::generate_n(std::back_inserter(channel.samples), endFrame - startFrame + 1, [&is] {
-                        return read<glm::quat>(is);
-                    });
-                    action->rotationChannel = channel;
-                    break;
-                }
-                case PathType::Translation: {
-                    TranslationChannel channel;
-                    channel.startFrame = startFrame;
-                    std::generate_n(std::back_inserter(channel.samples), endFrame - startFrame + 1, [&is] {
-                        return read<glm::vec3>(is);
-                    });
-                    action->translationChannel = channel;
-                    break;
-                }
-                case PathType::Scale: {
-                    ScaleChannel channel;
-                    channel.startFrame = startFrame;
-                    std::generate_n(std::back_inserter(channel.samples), endFrame - startFrame + 1, [&is] {
-                        return read<glm::vec3>(is);
-                    });
-                    action->scaleChannel = channel;
-                    break;
-                }
-                }
-            }
-            node->actions.push_back(std::move(action));
+            node->actions.push_back(readAction(is));
         }
 
         if (nodeType == NodeType::Mesh) {
@@ -215,7 +213,7 @@ void Entity::Node::render(Renderer *renderer, const glm::mat4 &parentWorldMatrix
     }
     const auto localMatrix = composeTransformMatrix(translation, rotation, scale);
     const auto worldMatrix = parentWorldMatrix * localMatrix;
-    if (auto m = mesh.get()) {
+    if (const auto m = mesh.get()) {
         renderer->render(m, worldMatrix);
     }
     for (const auto *child : children) {
