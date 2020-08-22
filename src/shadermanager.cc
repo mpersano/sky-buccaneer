@@ -6,13 +6,9 @@
 
 #include "shadermanager.h"
 
-namespace {
+#include <type_traits>
 
-template<typename T, std::size_t size>
-constexpr std::size_t arrayLength(T (&)[size])
-{
-    return size;
-}
+namespace {
 
 std::unique_ptr<GL::ShaderProgram>
 loadProgram(ShaderManager::Program id)
@@ -28,7 +24,7 @@ loadProgram(ShaderManager::Program id)
         { "assets/shaders/phong.vert", "assets/shaders/phong.frag" }, // Phong
         { "assets/shaders/shadow.vert", "assets/shaders/shadow.frag" }, // Shadow
     };
-    static_assert(arrayLength(programSources) == ShaderManager::NumPrograms, "expected number of programs to match");
+    static_assert(std::extent_v<decltype(programSources)> == ShaderManager::NumPrograms, "expected number of programs to match");
     const auto &sources = programSources[id];
     std::unique_ptr<GL::ShaderProgram> program(new GL::ShaderProgram);
     program->addShader(GL_VERTEX_SHADER, sources.vertexShader);
@@ -79,7 +75,7 @@ int ShaderManager::uniformLocation(Uniform id)
             "shadowMapTexture",
             // clang-format on
         };
-        static_assert(arrayLength(uniformNames) == NumUniforms, "expected number of uniforms to match");
+        static_assert(std::extent_v<decltype(uniformNames)> == NumUniforms, "expected number of uniforms to match");
 
         location = m_currentProgram->program->uniformLocation(uniformNames[id]);
         m_currentProgram->uniformLocations[id] = location;
