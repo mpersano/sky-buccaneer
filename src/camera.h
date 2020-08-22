@@ -1,6 +1,6 @@
 #pragma once
 
-#include <glm/glm.hpp>
+#include "frustum.h"
 
 class Camera
 {
@@ -31,9 +31,12 @@ public:
     glm::mat4 projectionMatrix() const { return m_projectionMatrix; }
     glm::mat4 viewMatrix() const { return m_viewMatrix; }
 
+    const Frustum &frustum() const { return m_frustum; }
+
 private:
     void updateProjectionMatrix();
     void updateViewMatrix();
+    void updateFrustum();
 
     float m_fov;
     float m_aspectRatio;
@@ -44,4 +47,5 @@ private:
     glm::vec3 m_up;
     glm::mat4 m_projectionMatrix;
     glm::mat4 m_viewMatrix;
+    Frustum m_frustum;
 };

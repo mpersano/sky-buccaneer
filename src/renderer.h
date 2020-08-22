@@ -39,4 +39,5 @@ private:
     std::vector<DrawCall> m_drawCalls;
     ShaderManager *m_shaderManager;
     const Camera *m_camera;
+    Camera m_lightCamera;
 };

@@ -16,6 +16,13 @@ Renderer::Renderer(ShaderManager *shaderManager, const Camera *camera)
     , m_camera(camera)
 {
     m_lightPosition = glm::vec3(7, 4, -4);
+
+    m_lightCamera.setAspectRatio(static_cast<float>(m_shadowBuffer->width()) / m_shadowBuffer->height());
+    m_lightCamera.setZNear(1.0f);
+    m_lightCamera.setZFar(50.0f);
+    m_lightCamera.setEye(m_lightPosition);
+    m_lightCamera.setCenter(glm::vec3(0));
+    m_lightCamera.setUp(glm::vec3(0, 1, 0));
 }
 
 Renderer::~Renderer() = default;
@@ -48,24 +55,17 @@ void Renderer::end()
     glViewport(0, 0, m_shadowBuffer->width(), m_shadowBuffer->height());
 
     glClear(GL_DEPTH_BUFFER_BIT);
-
-    const auto HalfWidth = 20.0f;
-    const auto HalfHeight = 20.0f;
-    const auto ZNear = 1.0f;
-    const auto ZFar = 22.5f;
-    const auto lightProjection =
-            // glm::ortho(-HalfWidth, HalfWidth, -HalfHeight, HalfHeight, ZNear, ZFar);
-            glm::perspective(glm::radians(45.0f), static_cast<float>(m_shadowBuffer->width()) / m_shadowBuffer->height(), 1.0f, 50.f);
-    const auto lightView = glm::lookAt(m_lightPosition, glm::vec3(0, 0, 0), glm::vec3(0, 1, 0));
-
     m_shaderManager->useProgram(ShaderManager::Shadow);
-    m_shaderManager->setUniform(ShaderManager::ViewMatrix, lightView);
-    m_shaderManager->setUniform(ShaderManager::ProjectionMatrix, lightProjection);
+    m_shaderManager->setUniform(ShaderManager::ViewMatrix, m_lightCamera.viewMatrix());
+    m_shaderManager->setUniform(ShaderManager::ProjectionMatrix, m_lightCamera.projectionMatrix());
 
     glEnable(GL_POLYGON_OFFSET_FILL);
     glPolygonOffset(4, 4);
 
+    const auto &lightFrustum = m_lightCamera.frustum();
     for (const auto &drawCall : m_drawCalls) {
+        if (!lightFrustum.contains(drawCall.mesh->boundingBox(), drawCall.worldMatrix))
+            continue;
         m_shaderManager->setUniform(ShaderManager::ModelMatrix, drawCall.worldMatrix);
         drawCall.mesh->render();
     }
@@ -84,14 +84,21 @@ void Renderer::end()
     m_shaderManager->setUniform(ShaderManager::ShadowMapTexture, 0);
     m_shaderManager->setUniform(ShaderManager::ProjectionMatrix, m_camera->projectionMatrix());
     m_shaderManager->setUniform(ShaderManager::ViewMatrix, m_camera->viewMatrix());
-    m_shaderManager->setUniform(ShaderManager::LightViewProjection, lightProjection * lightView);
+    m_shaderManager->setUniform(ShaderManager::LightViewProjection, m_lightCamera.projectionMatrix() * m_lightCamera.viewMatrix());
 
     m_shadowBuffer->bindTexture();
 
+    int clipCount = 0;
+    const auto &frustum = m_camera->frustum();
     for (const auto &drawCall : m_drawCalls) {
+        if (!frustum.contains(drawCall.mesh->boundingBox(), drawCall.worldMatrix)) {
+            ++clipCount;
+            continue;
+        }
         const auto normalMatrix = glm::transpose(glm::inverse(glm::mat3(drawCall.worldMatrix)));
         m_shaderManager->setUniform(ShaderManager::ModelMatrix, drawCall.worldMatrix);
         m_shaderManager->setUniform(ShaderManager::NormalMatrix, normalMatrix);
         drawCall.mesh->render();
     }
+    std::cout << "clipped: " << clipCount << '\n';
 }

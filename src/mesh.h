@@ -7,6 +7,11 @@
 
 #include <vector>
 
+struct BoundingBox {
+    glm::vec3 min;
+    glm::vec3 max;
+};
+
 class Mesh : private NonCopyable
 {
 public:
@@ -21,8 +26,14 @@ public:
 
     void render() const;
 
+    const BoundingBox &boundingBox() const { return m_boundingBox; }
+
 private:
+    void initializeBuffers(const std::vector<Vertex> &vertices, const std::vector<unsigned> &indices);
+    void initializeBoundingBox(const std::vector<Vertex> &vertices);
+
     int m_elementCount = 0;
     GLuint m_vao;
     GLuint m_vbo[2];
+    BoundingBox m_boundingBox;
 };
