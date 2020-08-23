@@ -10,4 +10,9 @@ v better shader
 v shadow mapping
 v animated gif
 v batch meshes in renderer
-* exporter: use FCurve::array_index to figure out component index (e.g. X/Y/Z)
+v exporter: use FCurve::array_index to figure out component index (e.g. X/Y/Z)
+* frustum culling
+  v basic frustum culling
+  * optimization: get vectors from view matrix
+* octree collision detection/rendering
+* UV mapping

@@ -85,6 +85,7 @@ void Camera::updateFrustum()
     const auto farHeight = m_zFar * tang;
     const auto farWidth = farHeight * m_aspectRatio;
 
+    // TODO could get these from m_viewMatrix
     const auto viewZ = glm::normalize(m_eye - m_center);
     const auto viewX = glm::normalize(glm::cross(m_up, viewZ));
     const auto viewY = glm::cross(viewZ, viewX);
