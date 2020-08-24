@@ -10,7 +10,7 @@ struct String
 struct Vertex
 {
     glm::vec3 position;
-	glm::vec3 normal;
+    glm::vec3 normal;
 };
 
 struct Triangle
@@ -21,9 +21,9 @@ struct Triangle
 struct Mesh
 {
     uint32_t vertexCount;
-	Vertex vertices[];
-	uint32_t triangleCount;
-	Triangle triangles[];
+    Vertex vertices[];
+    uint32_t triangleCount;
+    Triangle triangles[];
 };
 
 struct Transform
@@ -57,15 +57,15 @@ struct Action
 struct Node
 {
     String name;
-	enum Type : uint8_t
-	{
-		Empty = 0,
-		Mesh = 1,
-	};
+    enum Type : uint8_t
+    {
+        Empty = 0,
+        Mesh = 1,
+    };
     Type type;
     Transform transform;
     uint32_t childCount;
-	uint32_t children[]; // index into node array in Entity
+    uint32_t children[]; // index into node array in Entity
     uint32_t actionCount;
     Action actions[];
 };
