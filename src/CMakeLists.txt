@@ -1,5 +1,6 @@
 find_package(OpenGL REQUIRED)
 find_package(GLEW REQUIRED)
+find_package(PNG REQUIRED)
 
 set(GAME_SOURCES
     main.cc
@@ -14,6 +15,8 @@ set(GAME_SOURCES
     camera.cc
     frustum.cc
     shadermanager.cc
+    image.cc
+    texture.cc
 )
 
 add_executable(game ${GAME_SOURCES})
@@ -30,6 +33,7 @@ target_link_libraries(game
 PUBLIC
     ${OPENGL_LIBRARIES}
     ${GLEW_LIBRARIES}
+	${PNG_LIBRARIES}
     glm
     glfw
     spdlog

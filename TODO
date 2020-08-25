@@ -15,4 +15,9 @@ v exporter: use FCurve::array_index to figure out component index (e.g. X/Y/Z)
   v basic frustum culling
   * optimization: get vectors from view matrix
 * octree collision detection/rendering
-* UV mapping
+v UV mapping
+  v UV mapping serialization
+  * material serialization
+  * proper phong shading + shadow mapping
+  * renderer: sort meshes by material
+  * use libspng

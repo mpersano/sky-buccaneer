@@ -48,18 +48,23 @@ void Mesh::initializeBuffers(const std::vector<Vertex> &vertices, const std::vec
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo[1]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned) * indices.size(), indices.data(), GL_STATIC_DRAW);
 
-    static_assert(sizeof(glm::vec4) == 4 * sizeof(GLfloat));
+    static_assert(sizeof(glm::vec3) == 3 * sizeof(GLfloat));
+    static_assert(sizeof(glm::vec2) == 2 * sizeof(GLfloat));
 
     constexpr auto Stride = sizeof(Vertex);
-    static_assert(Stride == 6 * sizeof(GLfloat));
+    static_assert(Stride == 8 * sizeof(GLfloat));
 
     // position
     glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, Stride, reinterpret_cast<GLvoid *>(0));
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, Stride, reinterpret_cast<GLvoid *>(offsetof(Vertex, position)));
 
     // normal
     glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, Stride, reinterpret_cast<GLvoid *>(sizeof(glm::vec3)));
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, Stride, reinterpret_cast<GLvoid *>(offsetof(Vertex, normal)));
+
+    // uv
+    glEnableVertexAttribArray(2);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, Stride, reinterpret_cast<GLvoid *>(offsetof(Vertex, texcoord)));
 }
 
 void Mesh::initializeBoundingBox(const std::vector<Vertex> &vertices)

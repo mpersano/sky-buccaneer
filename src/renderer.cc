@@ -4,6 +4,7 @@
 #include "shadermanager.h"
 #include "shaderprogram.h"
 #include "shadowbuffer.h"
+#include "texture.h"
 
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/string_cast.hpp>
@@ -14,6 +15,7 @@ Renderer::Renderer(ShaderManager *shaderManager, const Camera *camera)
     : m_shadowBuffer(new GL::ShadowBuffer(1024, 1024))
     , m_shaderManager(shaderManager)
     , m_camera(camera)
+    , m_texture(new GL::Texture)
 {
     m_lightPosition = glm::vec3(7, 4, -4);
 
@@ -23,6 +25,8 @@ Renderer::Renderer(ShaderManager *shaderManager, const Camera *camera)
     m_lightCamera.setEye(m_lightPosition);
     m_lightCamera.setCenter(glm::vec3(0));
     m_lightCamera.setUp(glm::vec3(0, 1, 0));
+
+    m_texture->load("assets/textures/cube-texture.png");
 }
 
 Renderer::~Renderer() = default;
@@ -86,7 +90,11 @@ void Renderer::end()
     m_shaderManager->setUniform(ShaderManager::ViewMatrix, m_camera->viewMatrix());
     m_shaderManager->setUniform(ShaderManager::LightViewProjection, m_lightCamera.projectionMatrix() * m_lightCamera.viewMatrix());
 
+#if 0
     m_shadowBuffer->bindTexture();
+#endif
+
+    m_texture->bind();
 
     const auto &frustum = m_camera->frustum();
     for (const auto &drawCall : m_drawCalls) {

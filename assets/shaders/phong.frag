@@ -1,6 +1,7 @@
 #version 420 core
 
 uniform sampler2DShadow shadowMapTexture;
+uniform sampler2D baseColorTexture;
 uniform vec3 eyePosition;
 uniform vec3 lightPosition;
 
@@ -8,6 +9,7 @@ in vec3 vs_normal;
 in vec3 vs_position;
 in vec4 vs_color;
 in vec4 vs_positionInLightSpace;
+in vec2 vs_texcoord;
 
 const vec3 ambient = vec3(0.05);
 const float shininess = 1.0;
@@ -15,7 +17,7 @@ const vec3 light_color = vec3(1.0, 1.0, 1.0);
 const float kd = 0.5;
 const float ks = 0.5;
 
-out vec4 frag_color;
+out vec4 fragColor;
 
 vec3 phong()
 {
@@ -67,6 +69,9 @@ float shadowFactor()
 
 void main(void)
 {
+    /*
     vec3 color = phong() * shadowFactor();
-    frag_color = vec4(color, vs_color.w);
+    fragColor = vec4(color, vs_color.w);
+    */
+    fragColor = texture(baseColorTexture, vs_texcoord);
 }

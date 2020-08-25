@@ -21,6 +21,7 @@ public:
     struct Vertex {
         glm::vec3 position;
         glm::vec3 normal;
+        glm::vec2 texcoord;
     };
     void setData(const std::vector<Vertex> &vertices, const std::vector<unsigned> &indices);
 
