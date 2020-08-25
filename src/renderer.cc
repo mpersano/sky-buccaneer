@@ -88,17 +88,13 @@ void Renderer::end()
 
     m_shadowBuffer->bindTexture();
 
-    int clipCount = 0;
     const auto &frustum = m_camera->frustum();
     for (const auto &drawCall : m_drawCalls) {
-        if (!frustum.contains(drawCall.mesh->boundingBox(), drawCall.worldMatrix)) {
-            ++clipCount;
+        if (!frustum.contains(drawCall.mesh->boundingBox(), drawCall.worldMatrix))
             continue;
-        }
         const auto normalMatrix = glm::transpose(glm::inverse(glm::mat3(drawCall.worldMatrix)));
         m_shaderManager->setUniform(ShaderManager::ModelMatrix, drawCall.worldMatrix);
         m_shaderManager->setUniform(ShaderManager::NormalMatrix, normalMatrix);
         drawCall.mesh->render();
     }
-    std::cout << "clipped: " << clipCount << '\n';
 }
