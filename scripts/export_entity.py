@@ -1,7 +1,9 @@
 import bpy
 from bpy_extras.io_utils import ExportHelper
+from bpy_extras import node_shader_utils
 from mathutils import Euler
 import struct
+import os
 
 bl_info = {
     "name": "Area-13 Entity Exporter",
@@ -45,56 +47,67 @@ def write_entity(filepath, context):
         def write_mesh(mesh):
             mesh_vertices = mesh.vertices[:]
             mesh_polygons = mesh.polygons[:]
-            
+            materials = mesh.materials[:]
+
             uv_layer = None
             if len(mesh.uv_layers) > 0:
                 uv_layer = mesh.uv_layers.active.data
 
-            vertex_dict = {}
-            vertices = []
-            triangles = []
+            # write meshes (one per material)
+            write_int32(len(materials))
+            for mat_index, mat in enumerate(materials):
+                # write material
 
-            for poly in mesh_polygons:
-                if uv_layer is not None:
-                    texcoords = [uv_layer[i].uv for i in range(poly.loop_start, poly.loop_start + poly.loop_total)]
-                else:
-                    texcoords = [[0, 0] * len(poly.vertices)]
+                write_string(mat.name)
+                mat_wrap = node_shader_utils.PrincipledBSDFWrapper(mat)
+                base_color_texture = mat_wrap.base_color_texture.image.filepath
+                write_string(os.path.basename(base_color_texture))
 
-                def vec3_to_key(v):
-                    return round(v[0], 6), round(v[1], 6), round(v[2], 6)
+                polygons = [p for p in mesh_polygons if p.material_index == mat_index]
+                vertex_dict = {}
+                vertices = []
+                triangles = []
 
-                def vec2_to_key(v):
-                    return round(v[0], 6), round(v[1], 6)
+                for poly in polygons:
+                    if uv_layer is not None:
+                        texcoords = [uv_layer[i].uv for i in range(poly.loop_start, poly.loop_start + poly.loop_total)]
+                    else:
+                        texcoords = [[0, 0] * len(poly.vertices)]
 
-                def vertex_index(i):
-                    vertex = mesh_vertices[poly.vertices[i]]
-                    position = vertex.co
-                    normal = vertex.normal
-                    texcoord = texcoords[i]
-                    key = vec3_to_key(position), vec3_to_key(normal), vec2_to_key(texcoord)
-                    vertex_index = vertex_dict.get(key)
-                    if vertex_index is None:
-                        vertex_index = vertex_dict[key] = len(vertices)
-                        vertices.append((position, normal, texcoord))
-                    return vertex_index
+                    def vec3_to_key(v):
+                        return round(v[0], 6), round(v[1], 6), round(v[2], 6)
 
-                for i in range(1, len(poly.vertices) - 1):
-                    triangles.append((vertex_index(0), vertex_index(i), vertex_index(i + 1)))
+                    def vec2_to_key(v):
+                        return round(v[0], 6), round(v[1], 6)
 
-            print('Exporting mesh `%s` (%d vertices, %d triangles)' % (mesh.name, len(vertices), len(triangles)))
-            print(vertex_dict)
+                    def vertex_index(i):
+                        vertex = mesh_vertices[poly.vertices[i]]
+                        position = vertex.co
+                        normal = vertex.normal
+                        texcoord = texcoords[i]
+                        key = vec3_to_key(position), vec3_to_key(normal), vec2_to_key(texcoord)
+                        vertex_index = vertex_dict.get(key)
+                        if vertex_index is None:
+                            vertex_index = vertex_dict[key] = len(vertices)
+                            vertices.append((position, normal, texcoord))
+                        return vertex_index
 
-            write_int32(len(vertices))
-            for vertex in vertices:
-                write_vec3(vertex[0]) # position
-                write_vec3(vertex[1]) # normal
-                write_vec2(vertex[2]) # texcoord
+                    for i in range(1, len(poly.vertices) - 1):
+                        triangles.append((vertex_index(0), vertex_index(i), vertex_index(i + 1)))
 
-            write_int32(len(triangles))
-            for tri in triangles:
-                write_int32(tri[0])
-                write_int32(tri[1])
-                write_int32(tri[2])
+                print('Exporting submesh (material: `%s`, vertices: %d, triangles: %d)' % (mat.name, len(vertices), len(triangles)))
+
+                write_int32(len(vertices))
+                for vertex in vertices:
+                    write_vec3(vertex[0]) # position
+                    write_vec3(vertex[1]) # normal
+                    write_vec2(vertex[2]) # texcoord
+
+                write_int32(len(triangles))
+                for tri in triangles:
+                    write_int32(tri[0])
+                    write_int32(tri[1])
+                    write_int32(tri[2])
 
         def write_action(action):
             RotationChannel = 0
@@ -169,12 +182,12 @@ def write_entity(filepath, context):
                 write_mesh(mesh)
                 obj.to_mesh_clear()
 
-class Area13EntityExporter(bpy.types.Operator, ExportHelper):
-    bl_idname = "export_scene.a13"
-    bl_label = "Export Area-13 Entity"
-    bl_description = "Export scene to Area-13 entity"
+class ExportEntity(bpy.types.Operator, ExportHelper):
+    bl_idname = "export_mesh.z3"
+    bl_label = "Export Entity"
+    bl_description = "Export scene to game entity"
 
-    filename_ext = ".entity"
+    filename_ext = ".z3"
 
     def execute(self, context):
         write_entity(self.filepath, context)
@@ -182,7 +195,7 @@ class Area13EntityExporter(bpy.types.Operator, ExportHelper):
 
 def register():
     print('registered!')
-    bpy.utils.register_class(Area13EntityExporter)
+    bpy.utils.register_class(EntityExporter)
 
 def unregister():
-    bpy.utils.unregister_class(Area13EntityExporter)
+    bpy.utils.unregister_class(EntityExporter)

@@ -18,7 +18,8 @@ struct VAOBinder : NonCopyable {
 
 } // namespace
 
-Mesh::Mesh()
+Mesh::Mesh(const Material *material)
+    : m_material(material)
 {
     glGenBuffers(2, m_vbo);
     glGenVertexArrays(1, &m_vao);

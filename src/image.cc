@@ -46,7 +46,7 @@ bool Image::load(const std::string &path)
 
     png_bytep *rows = png_get_rows(png_ptr, info_ptr);
     for (int i = 0; i < m_height; i++)
-        memcpy(&m_bits[i * m_width], rows[i], m_width * sizeof(uint32_t));
+        memcpy(&m_bits[i * m_width], rows[m_height - i - 1], m_width * sizeof(uint32_t));
 
     png_destroy_read_struct(&png_ptr, &info_ptr, 0);
 

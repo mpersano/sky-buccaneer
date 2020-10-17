@@ -7,7 +7,7 @@ namespace {
 
 template<typename T>
 static T
-next_power_of_2(T n)
+nextPowerOf2(T n)
 {
     --n;
     n |= n >> 1;

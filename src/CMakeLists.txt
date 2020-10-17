@@ -17,6 +17,8 @@ set(GAME_SOURCES
     shadermanager.cc
     image.cc
     texture.cc
+    material.cc
+    materialcache.cc
 )
 
 add_executable(game ${GAME_SOURCES})

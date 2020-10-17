@@ -2,6 +2,7 @@
 
 #include "camera.h"
 #include "entity.h"
+#include "materialcache.h"
 #include "renderer.h"
 #include "shadermanager.h"
 
@@ -13,6 +14,7 @@
 
 World::World()
     : m_shaderManager(new ShaderManager)
+    , m_materialCache(new MaterialCache)
     , m_camera(new Camera)
     , m_renderer(new Renderer(m_shaderManager.get(), m_camera.get()))
     , m_entity(new Entity)
@@ -20,7 +22,7 @@ World::World()
     m_player.position = glm::vec3(8, 0, 0);
     m_player.rotation = glm::rotate(glm::mat4(1), -0.5f * glm::pi<float>(), glm::vec3(0, 1, 0));
 
-    m_entity->load("assets/meshes/scene.bin");
+    m_entity->load("assets/meshes/cube.bin", m_materialCache.get());
     m_entity->setActiveAction("Empty", "TestAction");
 
     glClearColor(0, 0, 0, 0);

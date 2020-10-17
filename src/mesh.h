@@ -12,10 +12,12 @@ struct BoundingBox {
     glm::vec3 max;
 };
 
+class Material;
+
 class Mesh : private NonCopyable
 {
 public:
-    Mesh();
+    Mesh(const Material *material);
     ~Mesh();
 
     struct Vertex {
@@ -29,10 +31,13 @@ public:
 
     const BoundingBox &boundingBox() const { return m_boundingBox; }
 
+    const Material *material() const { return m_material; }
+
 private:
     void initializeBuffers(const std::vector<Vertex> &vertices, const std::vector<unsigned> &indices);
     void initializeBoundingBox(const std::vector<Vertex> &vertices);
 
+    const Material *m_material;
     int m_elementCount = 0;
     GLuint m_vao;
     GLuint m_vbo[2];

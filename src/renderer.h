@@ -41,5 +41,4 @@ private:
     ShaderManager *m_shaderManager;
     const Camera *m_camera;
     Camera m_lightCamera;
-    std::unique_ptr<GL::Texture> m_texture;
 };

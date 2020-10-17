@@ -9,6 +9,7 @@
 
 class Mesh;
 class Renderer;
+class MaterialCache;
 
 struct Action {
     std::string name;
@@ -27,7 +28,7 @@ class Entity
 public:
     ~Entity();
 
-    void load(const char *filepath);
+    void load(const char *filepath, MaterialCache *materialCache);
     void render(Renderer *renderer, const glm::mat4 &worldMatrix, float frame) const;
     bool setActiveAction(std::string_view node, std::string_view action);
 
@@ -41,7 +42,7 @@ private:
         Transform transform;
         const Node *parent = nullptr;
         std::vector<const Node *> children;
-        std::unique_ptr<Mesh> mesh; // possibly null
+        std::vector<std::unique_ptr<Mesh>> meshes;
         std::vector<std::unique_ptr<Action>> actions;
         const Action *activeAction = nullptr;
     };

@@ -1,5 +1,6 @@
 #include "entity.h"
 
+#include "materialcache.h"
 #include "mesh.h"
 #include "panic.h"
 #include "renderer.h"
@@ -8,11 +9,16 @@
 
 #include <algorithm>
 #include <fstream>
-
-#include <glm/gtx/string_cast.hpp>
 #include <iostream>
 
+#include <glm/gtx/string_cast.hpp>
+
 namespace {
+
+const std::string texturePath(const std::string &basename)
+{
+    return std::string("assets/textures/") + basename;
+}
 
 template<typename T>
 T read(std::istream &is)
@@ -33,7 +39,7 @@ std::string read(std::istream &is)
     return s;
 }
 
-std::unique_ptr<Mesh> readMesh(std::istream &is)
+std::unique_ptr<Mesh> readMesh(std::istream &is, const Material *material)
 {
     const auto vertexCount = read<uint32_t>(is);
 
@@ -44,7 +50,7 @@ std::unique_ptr<Mesh> readMesh(std::istream &is)
     std::vector<unsigned> indices(3 * triangleCount);
     is.read(reinterpret_cast<char *>(indices.data()), 3 * triangleCount * sizeof(unsigned));
 
-    std::unique_ptr<Mesh> mesh(new Mesh);
+    std::unique_ptr<Mesh> mesh(new Mesh(material));
     mesh->setData(vertices, indices);
     return mesh;
 }
@@ -95,7 +101,7 @@ Entity::~Entity() = default;
 
 Entity::Node::~Node() = default;
 
-void Entity::load(const char *filepath)
+void Entity::load(const char *filepath, MaterialCache *materialCache)
 {
     std::ifstream is(filepath, std::ios::binary);
     if (!is) {
@@ -142,7 +148,18 @@ void Entity::load(const char *filepath)
         }
 
         if (nodeType == NodeType::Mesh) {
-            node->mesh = readMesh(is);
+            const auto meshCount = read<uint32_t>(is);
+            std::cout << "Reading " << meshCount << " meshes\n";
+            node->meshes.reserve(meshCount);
+
+            for (int i = 0; i < meshCount; ++i) {
+                const auto materialName = read<std::string>(is);
+
+                MaterialKey material;
+                material.baseColorTexture = texturePath(read<std::string>(is));
+
+                node->meshes.push_back(readMesh(is, materialCache->cachedMaterial(material)));
+            }
         }
     }
 
@@ -213,8 +230,8 @@ void Entity::Node::render(Renderer *renderer, const glm::mat4 &parentWorldMatrix
     }
     const auto localMatrix = composeTransformMatrix(translation, rotation, scale);
     const auto worldMatrix = parentWorldMatrix * localMatrix;
-    if (const auto m = mesh.get()) {
-        renderer->render(m, worldMatrix);
+    for (const auto &m : meshes) {
+        renderer->render(m.get(), worldMatrix);
     }
     for (const auto *child : children) {
         child->render(renderer, worldMatrix, frame);
