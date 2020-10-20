@@ -1,5 +1,5 @@
-Entity File Structure
-=====================
+Common Structures
+=================
 
 template <typename T>
 struct Vector
@@ -10,7 +10,7 @@ struct Vector
 
 struct String
 {
-    char8_t length;
+    uint8_t length;
     char[] data;
 };
 
@@ -21,15 +21,39 @@ struct Vertex
     glm::vec2 texcoord;
 };
 
-struct Triangle
-{
-    int vertices[3]; // index into vertex array in Mesh
-};
-
 struct Material
 {
     String name;
     String baseColorTexture;
+};
+
+Level File
+==========
+
+struct Face
+{
+    uint8_t vert_count;
+    int32_t vertices[]; // indices into vertex array in Mesh
+};
+
+struct Mesh
+{
+    Material material;
+    Vector<Vertex> vertices;
+    Vector<Face> faces;
+};
+
+struct LevelFile
+{
+    Vector<Mesh> meshes;
+};
+
+Entity File
+===========
+
+struct Triangle
+{
+    uint32_t vertices[3]; // indices into vertex array in Mesh
 };
 
 struct Mesh
@@ -37,11 +61,6 @@ struct Mesh
     Material material;
     Vector<Vertex> vertices;
     Vector<Triangle> triangles;
-};
-
-struct MeshSet
-{
-    Vector<Mesh> meshes;
 };
 
 struct Transform
@@ -87,13 +106,11 @@ struct Node
 
 struct MeshSetNode : Node
 {
-    MeshSet meshSet;
+    Vector<Mesh> meshes;
 };
 
-struct Entity
+struct EntityFile
 {
-    uint32_t nodeCount;
-    Node nodes[];
-    uint32_t animationCount;
-    Animation animations[];
+    Vector<Node> nodes;
+    Vector<Animation> animations;
 };
