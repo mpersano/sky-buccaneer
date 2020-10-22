@@ -17,7 +17,7 @@ class Material;
 class Mesh : private NonCopyable
 {
 public:
-    Mesh(const Material *material);
+    explicit Mesh(const Material *material);
     ~Mesh();
 
     struct Vertex {
