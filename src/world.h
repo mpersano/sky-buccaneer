@@ -10,6 +10,7 @@ class ShaderManager;
 class MaterialCache;
 class Renderer;
 class Entity;
+class Level;
 class Camera;
 
 class World
@@ -33,5 +34,6 @@ private:
     };
     Player m_player;
     std::unique_ptr<Entity> m_entity;
+    std::unique_ptr<Level> m_level;
     double m_time = 0.0;
 };

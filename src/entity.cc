@@ -16,11 +16,6 @@
 
 namespace {
 
-const std::string texturePath(const std::string &basename)
-{
-    return std::string("assets/textures/") + basename;
-}
-
 std::unique_ptr<Mesh> readMesh(FileAsset &f, const Material *material)
 {
     const auto vertexCount = f.read<uint32_t>();
@@ -135,11 +130,7 @@ void Entity::load(const char *filepath, MaterialCache *materialCache)
             node->meshes.reserve(meshCount);
 
             for (int i = 0; i < meshCount; ++i) {
-                const auto materialName = f.read<std::string>();
-
-                MaterialKey material;
-                material.baseColorTexture = texturePath(f.read<std::string>());
-
+                const auto material = f.read<MaterialKey>();
                 node->meshes.push_back(readMesh(f, materialCache->cachedMaterial(material)));
             }
         }

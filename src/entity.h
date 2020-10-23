@@ -33,8 +33,6 @@ public:
     bool setActiveAction(std::string_view node, std::string_view action);
 
 private:
-    struct Node;
-
     struct Node {
         ~Node();
         void render(Renderer *renderer, const glm::mat4 &parentWorldMatrix, float frame) const;

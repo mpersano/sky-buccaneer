@@ -36,7 +36,7 @@ struct Face
     int32_t vertices[]; // indices into vertex array in Mesh
 };
 
-struct Mesh
+struct PolygonMesh
 {
     Material material;
     Vector<Vertex> vertices;
@@ -45,7 +45,7 @@ struct Mesh
 
 struct LevelFile
 {
-    Vector<Mesh> meshes;
+    Vector<PolygonMesh> meshes;
 };
 
 Entity File
@@ -56,7 +56,7 @@ struct Triangle
     uint32_t vertices[3]; // indices into vertex array in Mesh
 };
 
-struct Mesh
+struct TriangleMesh
 {
     Material material;
     Vector<Vertex> vertices;
@@ -106,7 +106,7 @@ struct Node
 
 struct MeshSetNode : Node
 {
-    Vector<Mesh> meshes;
+    Vector<TriangleMesh> meshes;
 };
 
 struct EntityFile

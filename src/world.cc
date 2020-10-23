@@ -2,6 +2,7 @@
 
 #include "camera.h"
 #include "entity.h"
+#include "level.h"
 #include "materialcache.h"
 #include "renderer.h"
 #include "shadermanager.h"
@@ -18,12 +19,15 @@ World::World()
     , m_camera(new Camera)
     , m_renderer(new Renderer(m_shaderManager.get(), m_camera.get()))
     , m_entity(new Entity)
+    , m_level(new Level)
 {
     m_player.position = glm::vec3(8, 0, 0);
     m_player.rotation = glm::rotate(glm::mat4(1), -0.5f * glm::pi<float>(), glm::vec3(0, 1, 0));
 
     m_entity->load("assets/meshes/cube.bin", m_materialCache.get());
     m_entity->setActiveAction("Empty", "TestAction");
+
+    m_level->load("assets/meshes/level.bin", m_materialCache.get());
 
     glClearColor(0, 0, 0, 0);
     glEnable(GL_CULL_FACE);
@@ -51,7 +55,11 @@ void World::render() const
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     m_renderer->begin();
+#if 0
     m_entity->render(m_renderer.get(), glm::mat4(1), std::fmod(6.0f * m_time, 21.0f));
+#else
+    m_level->render(m_renderer.get(), glm::mat4(1));
+#endif
     m_renderer->end();
 }
 
