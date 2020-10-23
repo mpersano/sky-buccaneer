@@ -18,6 +18,7 @@ loadProgram(ShaderManager::Program id)
         VertexType vertexType;
     };
     static const ProgramSource programSources[] = {
+        { "assets/shaders/debug.vert", "assets/shaders/debug.frag" }, // Debug
         { "assets/shaders/phong.vert", "assets/shaders/phong.frag" }, // Phong
         { "assets/shaders/shadow.vert", "assets/shaders/shadow.frag" }, // Shadow
     };

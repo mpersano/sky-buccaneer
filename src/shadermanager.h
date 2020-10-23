@@ -11,6 +11,7 @@ public:
     ~ShaderManager();
 
     enum Program {
+        Debug,
         Phong,
         Shadow,
         NumPrograms
