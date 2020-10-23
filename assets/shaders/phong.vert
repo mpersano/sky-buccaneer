@@ -12,7 +12,6 @@ uniform mat3 normalMatrix;
 
 out vec3 vs_position;
 out vec3 vs_normal;
-out vec4 vs_color;
 out vec4 vs_positionInLightSpace;
 out vec2 vs_texcoord;
 
@@ -26,7 +25,6 @@ void main(void)
     vs_position = vec3(modelMatrix * vec4(position, 1.0));
     vs_positionInLightSpace = shadowMatrix * lightViewProjection * modelMatrix * vec4(position, 1.0);
     vs_normal = normalize(normalMatrix * normal);
-    vs_color = vec4(1.0);
     vs_texcoord = texcoord;
     gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
 }

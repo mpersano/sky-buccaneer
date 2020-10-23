@@ -7,11 +7,10 @@ uniform vec3 lightPosition;
 
 in vec3 vs_normal;
 in vec3 vs_position;
-in vec4 vs_color;
 in vec4 vs_positionInLightSpace;
 in vec2 vs_texcoord;
 
-const vec3 ambient = vec3(0.05);
+const vec3 ambient = vec3(0.1);
 const float shininess = 1.0;
 const vec3 light_color = vec3(1.0, 1.0, 1.0);
 const float kd = 0.5;
@@ -19,13 +18,13 @@ const float ks = 0.5;
 
 out vec4 fragColor;
 
-vec3 phong()
+vec3 phong(vec3 diffuseColor)
 {
     vec3 l = normalize(lightPosition - vs_position);
 
     float diffuse_light = max(dot(vs_normal, l), 0.0);
 
-    vec3 diffuse = kd * diffuse_light * vs_color.xyz;
+    vec3 diffuse = kd * diffuse_light * diffuseColor;
 
     vec3 v = normalize(eyePosition - vs_position);
     vec3 h = normalize(l + v);
@@ -36,7 +35,7 @@ vec3 phong()
 
     vec3 specular = ks * specular_light * light_color;
 
-    return diffuse + specular;
+    return diffuse + specular + ambient;
 }
 
 float shadowFactor()
@@ -73,5 +72,6 @@ void main(void)
     vec3 color = phong() * shadowFactor();
     fragColor = vec4(color, vs_color.w);
     */
-    fragColor = texture(baseColorTexture, vs_texcoord);
+    vec3 diffuseColor = texture(baseColorTexture, vs_texcoord).xyz;
+    fragColor = vec4(phong(diffuseColor), 1.0);
 }
