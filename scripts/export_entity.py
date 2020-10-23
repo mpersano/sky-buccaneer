@@ -57,6 +57,9 @@ def write_level(filepath, context):
         if obj.type != 'MESH':
             continue
         mesh = obj.to_mesh()
+        mesh.transform(obj.matrix_world)
+
+        print(obj.matrix_world)
 
         mesh_vertices = mesh.vertices[:]
         mesh_polygons = mesh.polygons[:]
