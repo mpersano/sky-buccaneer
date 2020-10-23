@@ -18,8 +18,9 @@ struct VAOBinder : NonCopyable {
 
 } // namespace
 
-Mesh::Mesh(const Material *material)
+Mesh::Mesh(const Material *material, GLenum primitive)
     : m_material(material)
+    , m_primitive(primitive)
 {
     glGenBuffers(2, m_vbo);
     glGenVertexArrays(1, &m_vao);
@@ -81,5 +82,5 @@ void Mesh::initializeBoundingBox(const std::vector<Vertex> &vertices)
 void Mesh::render() const
 {
     VAOBinder vaoBinder(m_vao);
-    glDrawElements(GL_TRIANGLES, m_elementCount, GL_UNSIGNED_INT, nullptr);
+    glDrawElements(m_primitive, m_elementCount, GL_UNSIGNED_INT, nullptr);
 }

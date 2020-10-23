@@ -17,7 +17,7 @@ class Material;
 class Mesh : private NonCopyable
 {
 public:
-    explicit Mesh(const Material *material);
+    explicit Mesh(const Material *material, GLenum primitive = GL_TRIANGLES);
     ~Mesh();
 
     struct Vertex {
@@ -38,6 +38,7 @@ private:
     void initializeBoundingBox(const std::vector<Vertex> &vertices);
 
     const Material *m_material;
+    GLenum m_primitive;
     int m_elementCount = 0;
     GLuint m_vao;
     GLuint m_vbo[2];
