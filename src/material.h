@@ -7,6 +7,8 @@ namespace GL {
 class Texture;
 }
 
+class DataStream;
+
 struct MaterialKey {
     std::string baseColorTexture;
     bool operator==(const MaterialKey &other) const
@@ -15,9 +17,11 @@ struct MaterialKey {
     }
 };
 
+DataStream &operator>>(DataStream &ds, MaterialKey &material);
+
 struct Material {
 public:
-    Material(const MaterialKey &materialKey);
+    explicit Material(const MaterialKey &materialKey);
     ~Material();
 
     void bind() const;

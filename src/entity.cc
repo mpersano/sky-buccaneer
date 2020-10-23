@@ -1,6 +1,6 @@
 #include "entity.h"
 
-#include "fileasset.h"
+#include "datastream.h"
 #include "materialcache.h"
 #include "mesh.h"
 #include "panic.h"
@@ -9,23 +9,35 @@
 #include "transformutils.h"
 
 #include <algorithm>
-#include <fstream>
 #include <iostream>
 
 #include <glm/gtx/string_cast.hpp>
 
 namespace {
 
-std::unique_ptr<Mesh> readMesh(FileAsset &f, const Material *material)
+DataStream &operator>>(DataStream &ds, Mesh::Vertex &v)
 {
-    const auto vertexCount = f.read<uint32_t>();
+    ds >> v.position;
+    ds >> v.normal;
+    ds >> v.texcoord;
+    return ds;
+}
 
-    std::vector<Mesh::Vertex> vertices(vertexCount);
-    f.read(reinterpret_cast<char *>(vertices.data()), vertexCount * sizeof(Mesh::Vertex));
+std::unique_ptr<Mesh> readMesh(DataStream &ds, const Material *material)
+{
+    std::vector<Mesh::Vertex> vertices;
+    ds >> vertices;
 
-    const auto triangleCount = f.read<uint32_t>();
-    std::vector<unsigned> indices(3 * triangleCount);
-    f.read(reinterpret_cast<char *>(indices.data()), 3 * triangleCount * sizeof(unsigned));
+    uint32_t triangleCount;
+    ds >> triangleCount;
+
+    std::vector<unsigned> indices;
+    indices.reserve(3 * triangleCount);
+    for (uint32_t i = 0; i < 3 * triangleCount; ++i) {
+        uint32_t index;
+        ds >> index;
+        indices.push_back(index);
+    }
 
     std::unique_ptr<Mesh> mesh(new Mesh(material));
     mesh->setData(vertices, indices);
@@ -33,39 +45,44 @@ std::unique_ptr<Mesh> readMesh(FileAsset &f, const Material *material)
 }
 
 template<typename SampleT>
-Action::Channel<SampleT> readChannel(FileAsset &f, uint32_t startFrame, uint32_t endFrame)
+Action::Channel<SampleT> readChannel(DataStream &ds, uint32_t startFrame, uint32_t endFrame)
 {
     Action::Channel<SampleT> channel;
     channel.startFrame = startFrame;
-    std::generate_n(std::back_inserter(channel.samples), endFrame - startFrame + 1, [&f] {
-        return f.read<SampleT>();
+    std::generate_n(std::back_inserter(channel.samples), endFrame - startFrame + 1, [&ds] {
+        SampleT t;
+        ds >> t;
+        return t;
     });
     return channel;
 }
 
-std::unique_ptr<Action> readAction(FileAsset &f)
+std::unique_ptr<Action> readAction(DataStream &ds)
 {
     std::unique_ptr<Action> action(new Action);
-    action->name = f.read<std::string>();
+    ds >> action->name;
     std::cout << "Reading action `" << action->name << "'\n";
-    const auto channelCount = f.read<uint32_t>();
+    uint32_t channelCount;
+    ds >> channelCount;
     std::cout << "Reading " << channelCount << " channels\n";
     for (int j = 0; j < channelCount; ++j) {
-        enum class PathType { Rotation,
-                              Translation,
-                              Scale };
-        const auto pathType = static_cast<PathType>(f.read<uint8_t>());
-        const auto startFrame = f.read<uint32_t>();
-        const auto endFrame = f.read<uint32_t>();
+        enum class PathType : uint8_t { Rotation,
+                                        Translation,
+                                        Scale } pathType;
+        ds >> reinterpret_cast<uint8_t &>(pathType);
+        uint32_t startFrame;
+        ds >> startFrame;
+        uint32_t endFrame;
+        ds >> endFrame;
         switch (pathType) {
         case PathType::Rotation:
-            action->rotationChannel = readChannel<glm::quat>(f, startFrame, endFrame);
+            action->rotationChannel = readChannel<glm::quat>(ds, startFrame, endFrame);
             break;
         case PathType::Translation:
-            action->translationChannel = readChannel<glm::vec3>(f, startFrame, endFrame);
+            action->translationChannel = readChannel<glm::vec3>(ds, startFrame, endFrame);
             break;
         case PathType::Scale:
-            action->scaleChannel = readChannel<glm::vec3>(f, startFrame, endFrame);
+            action->scaleChannel = readChannel<glm::vec3>(ds, startFrame, endFrame);
             break;
         }
     }
@@ -80,8 +97,8 @@ Entity::Node::~Node() = default;
 
 void Entity::load(const char *filepath, MaterialCache *materialCache)
 {
-    FileAsset f(filepath);
-    if (!f) {
+    DataStream ds(filepath);
+    if (!ds) {
         panic("failed to open %s\n", filepath);
     }
 
@@ -91,25 +108,30 @@ void Entity::load(const char *filepath, MaterialCache *materialCache)
         }
     };
 
-    const auto nodeCount = f.read<uint32_t>();
+    uint32_t nodeCount;
+    ds >> nodeCount;
+
+    std::cout << "**** nodeCount=" << nodeCount << '\n';
 
     std::generate_n(std::back_inserter(m_nodes), nodeCount, [] {
         return std::make_unique<Node>();
     });
     for (auto &node : m_nodes) {
-        node->name = f.read<std::string>();
+        ds >> node->name;
         std::cout << "Reading node `" << node->name << "'\n";
 
-        enum class NodeType { Empty,
-                              Mesh };
-        const auto nodeType = static_cast<NodeType>(f.read<uint8_t>());
+        enum class NodeType : uint8_t { Empty,
+                                        Mesh } nodeType;
+        ds >> reinterpret_cast<uint8_t &>(nodeType);
 
-        node->transform = f.read<Transform>();
+        ds >> node->transform;
 
-        const auto childCount = f.read<uint32_t>();
+        uint32_t childCount;
+        ds >> childCount;
         node->children.reserve(childCount);
         for (int i = 0; i < childCount; ++i) {
-            const auto childIndex = f.read<uint32_t>();
+            uint32_t childIndex;
+            ds >> childIndex;
             panicUnless(childIndex < m_nodes.size());
             auto *child = m_nodes[childIndex].get();
             panicUnless(!child->parent);
@@ -117,21 +139,24 @@ void Entity::load(const char *filepath, MaterialCache *materialCache)
             node->children.push_back(child);
         }
 
-        const auto actionCount = f.read<uint32_t>();
+        uint32_t actionCount;
+        ds >> actionCount;
         std::cout << "Reading " << actionCount << " actions\n";
         node->actions.reserve(actionCount);
         for (int i = 0; i < actionCount; ++i) {
-            node->actions.push_back(readAction(f));
+            node->actions.push_back(readAction(ds));
         }
 
         if (nodeType == NodeType::Mesh) {
-            const auto meshCount = f.read<uint32_t>();
+            uint32_t meshCount;
+            ds >> meshCount;
             std::cout << "Reading " << meshCount << " meshes\n";
             node->meshes.reserve(meshCount);
 
             for (int i = 0; i < meshCount; ++i) {
-                const auto material = f.read<MaterialKey>();
-                node->meshes.push_back(readMesh(f, materialCache->cachedMaterial(material)));
+                MaterialKey material;
+                ds >> material;
+                node->meshes.push_back(readMesh(ds, materialCache->cachedMaterial(material)));
             }
         }
     }

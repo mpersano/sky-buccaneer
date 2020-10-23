@@ -3,6 +3,8 @@
 #include <glm/glm.hpp>
 #include <glm/gtc/quaternion.hpp>
 
+class DataStream;
+
 struct Transform {
     glm::vec3 translation;
     glm::quat rotation;
@@ -10,3 +12,5 @@ struct Transform {
 
     glm::mat4 matrix() const;
 };
+
+DataStream &operator>>(DataStream &ds, Transform &t);

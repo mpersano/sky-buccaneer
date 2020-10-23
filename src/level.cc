@@ -1,6 +1,6 @@
 #include "level.h"
 
-#include "fileasset.h"
+#include "datastream.h"
 #include "material.h"
 #include "materialcache.h"
 #include "mesh.h"
@@ -11,21 +11,36 @@
 
 namespace {
 
-std::unique_ptr<Mesh> readMesh(FileAsset &f, const Material *material)
+DataStream &operator>>(DataStream &ds, Mesh::Vertex &v)
 {
-    const auto vertexCount = f.read<uint32_t>();
+    ds >> v.position;
+    ds >> v.normal;
+    ds >> v.texcoord;
+    return ds;
+}
 
-    std::vector<Mesh::Vertex> vertices(vertexCount);
-    f.read(reinterpret_cast<char *>(vertices.data()), vertexCount * sizeof(Mesh::Vertex));
+std::unique_ptr<Mesh> readMesh(DataStream &ds, const Material *material)
+{
+    std::vector<Mesh::Vertex> vertices;
+    ds >> vertices;
 
-    const auto faceCount = f.read<uint32_t>();
+    uint32_t faceCount;
+    ds >> faceCount;
 
     std::vector<unsigned> indices;
 
     for (int i = 0; i < faceCount; ++i) {
-        const auto faceIndexCount = f.read<uint8_t>();
-        std::vector<uint32_t> faceIndices(faceIndexCount);
-        f.read(reinterpret_cast<char *>(faceIndices.data()), faceIndexCount * sizeof(uint32_t));
+        uint8_t faceIndexCount;
+        ds >> faceIndexCount;
+
+        std::vector<uint32_t> faceIndices;
+        faceIndices.reserve(faceIndexCount);
+        for (int j = 0; j < faceIndexCount; ++j) {
+            uint32_t index;
+            ds >> index;
+            faceIndices.push_back(index);
+        }
+
         for (int j = 1; j < faceIndexCount - 1; ++j) {
             indices.push_back(faceIndices[0]);
             indices.push_back(faceIndices[j]);
@@ -45,16 +60,19 @@ Level::~Level() = default;
 
 void Level::load(const char *filepath, MaterialCache *materialCache)
 {
-    FileAsset f(filepath);
-    if (!f) {
+    DataStream ds(filepath);
+    if (!ds) {
         panic("failed to open %s\n", filepath);
     }
 
-    const auto meshCount = f.read<uint32_t>();
+    uint32_t meshCount;
+    ds >> meshCount;
+
     std::cout << "Reading " << meshCount << " meshes\n";
     for (int i = 0; i < meshCount; ++i) {
-        const auto material = f.read<MaterialKey>();
-        m_meshes.push_back(readMesh(f, materialCache->cachedMaterial(material)));
+        MaterialKey material;
+        ds >> material;
+        m_meshes.push_back(readMesh(ds, materialCache->cachedMaterial(material)));
     }
 }
 
