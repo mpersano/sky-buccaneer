@@ -1,5 +1,6 @@
 #include "entity.h"
 
+#include "fileasset.h"
 #include "materialcache.h"
 #include "mesh.h"
 #include "panic.h"
@@ -20,35 +21,16 @@ const std::string texturePath(const std::string &basename)
     return std::string("assets/textures/") + basename;
 }
 
-template<typename T>
-T read(std::istream &is)
+std::unique_ptr<Mesh> readMesh(FileAsset &f, const Material *material)
 {
-    // TODO handle endianness
-    T value;
-    is.read(reinterpret_cast<char *>(&value), sizeof(value));
-    return value;
-}
-
-template<>
-std::string read(std::istream &is)
-{
-    const int length = read<uint8_t>(is);
-    std::string s;
-    s.resize(length);
-    is.read(s.data(), length);
-    return s;
-}
-
-std::unique_ptr<Mesh> readMesh(std::istream &is, const Material *material)
-{
-    const auto vertexCount = read<uint32_t>(is);
+    const auto vertexCount = f.read<uint32_t>();
 
     std::vector<Mesh::Vertex> vertices(vertexCount);
-    is.read(reinterpret_cast<char *>(vertices.data()), vertexCount * sizeof(Mesh::Vertex));
+    f.read(reinterpret_cast<char *>(vertices.data()), vertexCount * sizeof(Mesh::Vertex));
 
-    const auto triangleCount = read<uint32_t>(is);
+    const auto triangleCount = f.read<uint32_t>();
     std::vector<unsigned> indices(3 * triangleCount);
-    is.read(reinterpret_cast<char *>(indices.data()), 3 * triangleCount * sizeof(unsigned));
+    f.read(reinterpret_cast<char *>(indices.data()), 3 * triangleCount * sizeof(unsigned));
 
     std::unique_ptr<Mesh> mesh(new Mesh(material));
     mesh->setData(vertices, indices);
@@ -56,39 +38,39 @@ std::unique_ptr<Mesh> readMesh(std::istream &is, const Material *material)
 }
 
 template<typename SampleT>
-Action::Channel<SampleT> readChannel(std::istream &is, uint32_t startFrame, uint32_t endFrame)
+Action::Channel<SampleT> readChannel(FileAsset &f, uint32_t startFrame, uint32_t endFrame)
 {
     Action::Channel<SampleT> channel;
     channel.startFrame = startFrame;
-    std::generate_n(std::back_inserter(channel.samples), endFrame - startFrame + 1, [&is] {
-        return read<SampleT>(is);
+    std::generate_n(std::back_inserter(channel.samples), endFrame - startFrame + 1, [&f] {
+        return f.read<SampleT>();
     });
     return channel;
 }
 
-std::unique_ptr<Action> readAction(std::istream &is)
+std::unique_ptr<Action> readAction(FileAsset &f)
 {
     std::unique_ptr<Action> action(new Action);
-    action->name = read<std::string>(is);
+    action->name = f.read<std::string>();
     std::cout << "Reading action `" << action->name << "'\n";
-    const auto channelCount = read<uint32_t>(is);
+    const auto channelCount = f.read<uint32_t>();
     std::cout << "Reading " << channelCount << " channels\n";
     for (int j = 0; j < channelCount; ++j) {
         enum class PathType { Rotation,
                               Translation,
                               Scale };
-        const auto pathType = static_cast<PathType>(read<uint8_t>(is));
-        const auto startFrame = read<uint32_t>(is);
-        const auto endFrame = read<uint32_t>(is);
+        const auto pathType = static_cast<PathType>(f.read<uint8_t>());
+        const auto startFrame = f.read<uint32_t>();
+        const auto endFrame = f.read<uint32_t>();
         switch (pathType) {
         case PathType::Rotation:
-            action->rotationChannel = readChannel<glm::quat>(is, startFrame, endFrame);
+            action->rotationChannel = readChannel<glm::quat>(f, startFrame, endFrame);
             break;
         case PathType::Translation:
-            action->translationChannel = readChannel<glm::vec3>(is, startFrame, endFrame);
+            action->translationChannel = readChannel<glm::vec3>(f, startFrame, endFrame);
             break;
         case PathType::Scale:
-            action->scaleChannel = readChannel<glm::vec3>(is, startFrame, endFrame);
+            action->scaleChannel = readChannel<glm::vec3>(f, startFrame, endFrame);
             break;
         }
     }
@@ -103,8 +85,8 @@ Entity::Node::~Node() = default;
 
 void Entity::load(const char *filepath, MaterialCache *materialCache)
 {
-    std::ifstream is(filepath, std::ios::binary);
-    if (!is) {
+    FileAsset f(filepath);
+    if (!f) {
         panic("failed to open %s\n", filepath);
     }
 
@@ -114,25 +96,25 @@ void Entity::load(const char *filepath, MaterialCache *materialCache)
         }
     };
 
-    const auto nodeCount = read<uint32_t>(is);
+    const auto nodeCount = f.read<uint32_t>();
 
     std::generate_n(std::back_inserter(m_nodes), nodeCount, [] {
         return std::make_unique<Node>();
     });
     for (auto &node : m_nodes) {
-        node->name = read<std::string>(is);
+        node->name = f.read<std::string>();
         std::cout << "Reading node `" << node->name << "'\n";
 
         enum class NodeType { Empty,
                               Mesh };
-        const auto nodeType = static_cast<NodeType>(read<uint8_t>(is));
+        const auto nodeType = static_cast<NodeType>(f.read<uint8_t>());
 
-        node->transform = read<Transform>(is);
+        node->transform = f.read<Transform>();
 
-        const auto childCount = read<uint32_t>(is);
+        const auto childCount = f.read<uint32_t>();
         node->children.reserve(childCount);
         for (int i = 0; i < childCount; ++i) {
-            const auto childIndex = read<uint32_t>(is);
+            const auto childIndex = f.read<uint32_t>();
             panicUnless(childIndex < m_nodes.size());
             auto *child = m_nodes[childIndex].get();
             panicUnless(!child->parent);
@@ -140,25 +122,25 @@ void Entity::load(const char *filepath, MaterialCache *materialCache)
             node->children.push_back(child);
         }
 
-        const auto actionCount = read<uint32_t>(is);
+        const auto actionCount = f.read<uint32_t>();
         std::cout << "Reading " << actionCount << " actions\n";
         node->actions.reserve(actionCount);
         for (int i = 0; i < actionCount; ++i) {
-            node->actions.push_back(readAction(is));
+            node->actions.push_back(readAction(f));
         }
 
         if (nodeType == NodeType::Mesh) {
-            const auto meshCount = read<uint32_t>(is);
+            const auto meshCount = f.read<uint32_t>();
             std::cout << "Reading " << meshCount << " meshes\n";
             node->meshes.reserve(meshCount);
 
             for (int i = 0; i < meshCount; ++i) {
-                const auto materialName = read<std::string>(is);
+                const auto materialName = f.read<std::string>();
 
                 MaterialKey material;
-                material.baseColorTexture = texturePath(read<std::string>(is));
+                material.baseColorTexture = texturePath(f.read<std::string>());
 
-                node->meshes.push_back(readMesh(is, materialCache->cachedMaterial(material)));
+                node->meshes.push_back(readMesh(f, materialCache->cachedMaterial(material)));
             }
         }
     }

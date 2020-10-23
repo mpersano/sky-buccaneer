@@ -19,6 +19,7 @@ set(GAME_SOURCES
     texture.cc
     material.cc
     materialcache.cc
+    fileasset.cc
 )
 
 add_executable(game ${GAME_SOURCES})
