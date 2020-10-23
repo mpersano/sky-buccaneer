@@ -8,6 +8,7 @@
 class Mesh;
 class Renderer;
 class MaterialCache;
+class Octree;
 
 class Level
 {
@@ -20,4 +21,5 @@ public:
 
 private:
     std::vector<std::unique_ptr<Mesh>> m_meshes;
+    std::unique_ptr<Octree> m_octree;
 };

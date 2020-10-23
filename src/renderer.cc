@@ -17,7 +17,7 @@ Renderer::Renderer(ShaderManager *shaderManager, const Camera *camera)
     , m_shaderManager(shaderManager)
     , m_camera(camera)
 {
-    m_lightPosition = glm::vec3(7, 4, -4);
+    m_lightPosition = glm::vec3(8, 0, 0);
 
     m_lightCamera.setAspectRatio(static_cast<float>(m_shadowBuffer->width()) / m_shadowBuffer->height());
     m_lightCamera.setZNear(1.0f);
@@ -51,6 +51,7 @@ void Renderer::end()
     glDepthFunc(GL_LESS);
     glDisable(GL_CULL_FACE);
 
+#if 0
     // render to shadow buffer
 
     m_shadowBuffer->bind();
@@ -74,6 +75,7 @@ void Renderer::end()
 
     glDisable(GL_POLYGON_OFFSET_FILL);
     m_shadowBuffer->unbind();
+#endif
 
     // render scene
 
@@ -88,15 +90,27 @@ void Renderer::end()
     m_shaderManager->setUniform(ShaderManager::ViewMatrix, m_camera->viewMatrix());
     m_shaderManager->setUniform(ShaderManager::LightViewProjection, m_lightCamera.projectionMatrix() * m_lightCamera.viewMatrix());
 
+    m_shaderManager->useProgram(ShaderManager::Debug);
+    m_shaderManager->setUniform(ShaderManager::ProjectionMatrix, m_camera->projectionMatrix());
+    m_shaderManager->setUniform(ShaderManager::ViewMatrix, m_camera->viewMatrix());
+
     const auto &frustum = m_camera->frustum();
     for (const auto &drawCall : m_drawCalls) {
-        if (!frustum.contains(drawCall.mesh->boundingBox(), drawCall.worldMatrix))
+#if 0
+        if (!frustum.contains(drawCall.mesh->boundingBox(), drawCall.worldMatrix)) {
             continue;
-        const auto normalMatrix = glm::transpose(glm::inverse(glm::mat3(drawCall.worldMatrix)));
-        m_shaderManager->setUniform(ShaderManager::ModelMatrix, drawCall.worldMatrix);
-        m_shaderManager->setUniform(ShaderManager::NormalMatrix, normalMatrix);
+        }
+#endif
         const auto *mesh = drawCall.mesh;
-        mesh->material()->bind();
+        if (auto material = mesh->material()) {
+            m_shaderManager->useProgram(ShaderManager::Phong);
+            material->bind();
+        } else {
+            m_shaderManager->useProgram(ShaderManager::Debug);
+        }
+        m_shaderManager->setUniform(ShaderManager::ModelMatrix, drawCall.worldMatrix);
+        const auto normalMatrix = glm::transpose(glm::inverse(glm::mat3(drawCall.worldMatrix)));
+        m_shaderManager->setUniform(ShaderManager::NormalMatrix, normalMatrix);
         mesh->render();
     }
 }

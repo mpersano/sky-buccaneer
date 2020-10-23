@@ -21,6 +21,7 @@ set(GAME_SOURCES
     materialcache.cc
     datastream.cc
     level.cc
+    octree.cc
 )
 
 add_executable(game ${GAME_SOURCES})
