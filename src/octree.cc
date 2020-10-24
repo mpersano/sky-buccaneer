@@ -248,6 +248,12 @@ std::unique_ptr<Node> initializeInternalNode(const BoundingBox &box, const std::
 
 std::unique_ptr<Node> initializeNode(const BoundingBox &box, const std::vector<Face> &faces)
 {
+    for (const auto &face : faces) {
+        for (const auto &vertex : face.vertices) {
+            assert(box.contains(vertex.position));
+        }
+    }
+
     constexpr auto MaxFacesPerLeafNode = 200;
 
     std::unique_ptr<Node> node;
