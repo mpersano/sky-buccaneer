@@ -1,5 +1,6 @@
 #include "octree.h"
 
+#include "geometryutils.h"
 #include "mesh.h"
 #include "renderer.h"
 
@@ -13,11 +14,6 @@
 #define DRAW_POLYGON_EDGES 1
 
 namespace OctreePrivate {
-
-struct BoundingBox {
-    glm::vec3 min;
-    glm::vec3 max;
-};
 
 struct Plane {
     glm::vec3 point;
@@ -320,16 +316,13 @@ Octree::~Octree() = default;
 
 void Octree::initialize(const std::vector<Face> &faces)
 {
-    OctreePrivate::BoundingBox box;
-    box.min = glm::vec3(std::numeric_limits<float>::max());
-    box.max = glm::vec3(std::numeric_limits<float>::min());
+    BoundingBox box;
     for (const auto &f : faces) {
         for (auto &v : f.vertices) {
-            box.min = glm::min(v.position, box.min);
-            box.max = glm::max(v.position, box.max);
+            box |= v.position;
         }
     }
-    m_root = initializeNode(box, faces);
+    m_root = OctreePrivate::initializeNode(box, faces);
 }
 
 void Octree::render(Renderer *renderer, const glm::mat4 &worldMatrix) const

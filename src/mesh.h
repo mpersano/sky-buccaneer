@@ -2,15 +2,12 @@
 
 #include "noncopyable.h"
 
+#include "geometryutils.h" // BoundingBox
+
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 
 #include <vector>
-
-struct BoundingBox {
-    glm::vec3 min;
-    glm::vec3 max;
-};
 
 class Material;
 

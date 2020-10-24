@@ -77,11 +77,8 @@ void Mesh::initializeBuffers(const std::vector<Vertex> &vertices, const std::vec
 
 void Mesh::initializeBoundingBox(const std::vector<Vertex> &vertices)
 {
-    m_boundingBox.min = glm::vec3(std::numeric_limits<float>::max());
-    m_boundingBox.max = glm::vec3(std::numeric_limits<float>::min());
     for (const auto &v : vertices) {
-        m_boundingBox.min = glm::min(v.position, m_boundingBox.min);
-        m_boundingBox.max = glm::max(v.position, m_boundingBox.max);
+        m_boundingBox |= v.position;
     }
 }
 

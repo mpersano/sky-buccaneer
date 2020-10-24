@@ -22,6 +22,7 @@ set(GAME_SOURCES
     datastream.cc
     level.cc
     octree.cc
+    geometryutils.cc
 )
 
 add_executable(game ${GAME_SOURCES})
