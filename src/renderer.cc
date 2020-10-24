@@ -10,6 +10,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+#include <algorithm>
 #include <iostream>
 
 Renderer::Renderer(ShaderManager *shaderManager, const Camera *camera)
@@ -95,6 +96,12 @@ void Renderer::end()
     m_shaderManager->setUniform(ShaderManager::ViewMatrix, m_camera->viewMatrix());
 
     const auto &frustum = m_camera->frustum();
+
+    std::sort(m_drawCalls.begin(), m_drawCalls.end(), [](const auto &lhs, const auto &rhs) {
+        return reinterpret_cast<std::intptr_t>(lhs.mesh->material()) < reinterpret_cast<std::intptr_t>(rhs.mesh->material());
+    });
+
+    const Material *curMaterial = nullptr;
     for (const auto &drawCall : m_drawCalls) {
 #if 0
         if (!frustum.contains(drawCall.mesh->boundingBox(), drawCall.worldMatrix)) {
@@ -102,11 +109,15 @@ void Renderer::end()
         }
 #endif
         const auto *mesh = drawCall.mesh;
-        if (auto material = mesh->material()) {
-            m_shaderManager->useProgram(ShaderManager::Phong);
-            material->bind();
-        } else {
-            m_shaderManager->useProgram(ShaderManager::Debug);
+        const auto *material = mesh->material();
+        if (material != curMaterial) {
+            if (material) {
+                m_shaderManager->useProgram(ShaderManager::Phong);
+                material->bind();
+            } else {
+                m_shaderManager->useProgram(ShaderManager::Debug);
+            }
+            curMaterial = material;
         }
         m_shaderManager->setUniform(ShaderManager::ModelMatrix, drawCall.worldMatrix);
         const auto normalMatrix = glm::transpose(glm::inverse(glm::mat3(drawCall.worldMatrix)));
