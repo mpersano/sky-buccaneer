@@ -24,6 +24,7 @@ public:
         glm::vec3 position;
         glm::vec3 normal;
         glm::vec2 texcoord;
+        bool operator==(const Vertex &other) const;
     };
     void setData(const std::vector<Vertex> &vertices, const std::vector<unsigned> &indices);
 

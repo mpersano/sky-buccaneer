@@ -1,6 +1,7 @@
 #include "mesh.h"
 
 #include <limits>
+#include <tuple>
 
 namespace {
 
@@ -17,6 +18,11 @@ struct VAOBinder : NonCopyable {
 };
 
 } // namespace
+
+bool Mesh::Vertex::operator==(const Vertex &other) const
+{
+    return std::tie(position, normal, texcoord) == std::tie(other.position, other.normal, other.texcoord);
+}
 
 Mesh::Mesh(const Material *material, GLenum primitive)
     : m_material(material)

@@ -4,7 +4,13 @@
 #include "renderer.h"
 
 #include <glm/gtx/string_cast.hpp>
+
+#include <algorithm>
 #include <iostream>
+#include <set>
+
+#define DRAW_NODE_BOXES 1
+#define DRAW_POLYGON_EDGES 1
 
 namespace OctreePrivate {
 
@@ -21,7 +27,9 @@ struct Plane {
 struct Node {
     virtual ~Node() = default;
     BoundingBox boundingBox;
-    std::unique_ptr<Mesh> boxMesh; // XXX remove this later
+#if DRAW_NODE_BOXES
+    std::unique_ptr<Mesh> boxMesh;
+#endif
     virtual void render(Renderer *renderer, const glm::mat4 &worldMatrix) const = 0;
 };
 
@@ -71,11 +79,99 @@ auto split(const Face &face, const Plane &plane)
 
 std::unique_ptr<Node> initializeNode(const BoundingBox &box, const std::vector<Face> &faces);
 
+struct VertexHasher {
+    std::size_t operator()(const Mesh::Vertex &vertex) const
+    {
+        std::hash<float> hasher;
+
+        size_t seed = 0;
+        const auto hashCombine = [&seed, &hasher](float value) {
+            auto hash = hasher(value);
+            hash += 0x9e3779b9 + (seed << 6) + (seed >> 2);
+            seed ^= hash;
+        };
+
+        hashCombine(vertex.position.x);
+        hashCombine(vertex.position.y);
+        hashCombine(vertex.position.z);
+
+        hashCombine(vertex.normal.x);
+        hashCombine(vertex.normal.y);
+        hashCombine(vertex.normal.z);
+
+        hashCombine(vertex.texcoord.x);
+        hashCombine(vertex.texcoord.y);
+
+        return seed;
+    }
+};
+
 std::unique_ptr<Node> initializeLeafNode(const BoundingBox &box, const std::vector<Face> &faces)
 {
     auto node = std::make_unique<LeafNode>();
     node->boundingBox = box;
-    // XXX initialize meshes
+
+    std::set<const Material *> materials;
+    std::transform(faces.begin(), faces.end(), std::inserter(materials, materials.begin()),
+                   [](const auto &face) { return face.material; });
+
+    for (const auto *material : materials) {
+        const auto toMeshVertex = [](const Face::Vertex &faceVertex) {
+            return Mesh::Vertex { faceVertex.position, faceVertex.normal, faceVertex.texcoord };
+        };
+
+        std::vector<Mesh::Vertex> vertices;
+        std::unordered_map<Mesh::Vertex, int, VertexHasher> vertexIndex;
+        for (auto &face : faces) {
+            if (face.material != material) {
+                continue;
+            }
+            for (auto &faceVertex : face.vertices) {
+                const auto v = toMeshVertex(faceVertex);
+                auto it = vertexIndex.find(v);
+                if (it == vertexIndex.end()) {
+                    vertices.push_back(v);
+                    vertexIndex.insert(it, { v, vertexIndex.size() });
+                }
+            }
+        }
+
+        std::vector<unsigned> indices;
+#if DRAW_POLYGON_EDGES
+        std::vector<unsigned> edgeIndices;
+#endif
+        for (auto &face : faces) {
+            const auto &vertices = face.vertices;
+            std::vector<unsigned> faceIndices;
+            faceIndices.reserve(vertices.size());
+            std::transform(vertices.begin(), vertices.end(), std::back_inserter(faceIndices),
+                           [toMeshVertex, &vertexIndex](const Face::Vertex &faceVertex) {
+                               return vertexIndex[toMeshVertex(faceVertex)];
+                           });
+            for (int i = 1; i < faceIndices.size() - 1; ++i) {
+                indices.push_back(faceIndices[0]);
+                indices.push_back(faceIndices[i]);
+                indices.push_back(faceIndices[i + 1]);
+            }
+#if DRAW_POLYGON_EDGES
+            for (int i = 0; i < faceIndices.size(); ++i) {
+                edgeIndices.push_back(faceIndices[i]);
+                edgeIndices.push_back(faceIndices[(i + 1) % faceIndices.size()]);
+            }
+#endif
+        }
+
+        auto mesh = std::make_unique<Mesh>(material);
+        mesh->setData(vertices, indices);
+        node->meshes.push_back(std::move(mesh));
+
+#if DRAW_POLYGON_EDGES
+        auto edgeMesh = std::make_unique<Mesh>(nullptr, GL_LINES);
+        edgeMesh->setData(vertices, edgeIndices);
+        node->meshes.push_back(std::move(edgeMesh));
+#endif
+    }
+
     return node;
 }
 
@@ -156,7 +252,7 @@ std::unique_ptr<Node> initializeInternalNode(const BoundingBox &box, const std::
 
 std::unique_ptr<Node> initializeNode(const BoundingBox &box, const std::vector<Face> &faces)
 {
-    constexpr auto MaxFacesPerLeafNode = 8;
+    constexpr auto MaxFacesPerLeafNode = 200;
 
     std::unique_ptr<Node> node;
     if (faces.size() <= MaxFacesPerLeafNode) {
@@ -166,6 +262,7 @@ std::unique_ptr<Node> initializeNode(const BoundingBox &box, const std::vector<F
     }
     assert(node);
 
+#if DRAW_NODE_BOXES
     std::vector<Mesh::Vertex> boxVerts(8);
     for (int i = 0; i < 8; ++i) {
         float x = ((i & 1) == 0) ? box.min.x : box.max.x;
@@ -189,18 +286,26 @@ std::unique_ptr<Node> initializeNode(const BoundingBox &box, const std::vector<F
     };
     node->boxMesh = std::make_unique<Mesh>(nullptr, GL_LINES);
     node->boxMesh->setData(boxVerts, boxIndices);
+#endif
 
     return node;
 }
 
 void LeafNode::render(Renderer *renderer, const glm::mat4 &worldMatrix) const
 {
+#if DRAW_NODE_BOXES
     renderer->render(boxMesh.get(), worldMatrix);
+#endif
+    for (auto &mesh : meshes) {
+        renderer->render(mesh.get(), worldMatrix);
+    }
 }
 
 void InternalNode::render(Renderer *renderer, const glm::mat4 &worldMatrix) const
 {
+#if DRAW_NODE_BOXES
     renderer->render(boxMesh.get(), worldMatrix);
+#endif
     for (auto &child : children) {
         if (child) {
             child->render(renderer, worldMatrix);
