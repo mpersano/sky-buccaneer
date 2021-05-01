@@ -33,7 +33,6 @@ private:
         glm::mat3 rotation;
     };
     Player m_player;
-    std::unique_ptr<Entity> m_entity;
     std::unique_ptr<Level> m_level;
     double m_time = 0.0;
 };
