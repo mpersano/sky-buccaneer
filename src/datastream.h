@@ -1,6 +1,6 @@
 #pragma once
 
-#include <fstream>
+#include <cstdio>
 #include <string>
 #include <vector>
 
@@ -11,8 +11,9 @@ class DataStream
 public:
     explicit DataStream(const char *path);
 
-    void readBytes(char *buf, std::size_t size);
+    size_t readBytes(char *buf, std::size_t size);
 
+    DataStream &operator>>(char &value);
     DataStream &operator>>(int8_t &value);
     DataStream &operator>>(uint8_t &value);
     DataStream &operator>>(int16_t &value);
@@ -21,11 +22,17 @@ public:
     DataStream &operator>>(uint32_t &value);
     DataStream &operator>>(float &value);
 
-    operator bool() const { return m_is.good(); }
+    operator bool() const { return !m_error; }
 
 private:
-    std::ifstream m_is;
+    FILE *m_in;
+    bool m_error;
 };
+
+inline DataStream &DataStream::operator>>(char &value)
+{
+    return *this >> reinterpret_cast<int8_t &>(value);
+}
 
 inline DataStream &DataStream::operator>>(uint8_t &value)
 {
@@ -49,21 +56,25 @@ inline DataStream &DataStream::operator>>(float &value)
 
 namespace detail {
 
-template<typename Container>
+template<typename SizeT, typename Container>
 DataStream &readContainer(DataStream &ds, Container &c)
 {
     c.clear();
-    uint32_t n;
-    ds >> n;
-    c.reserve(n);
-    for (uint32_t i = 0; i < n; ++i) {
-        typename Container::value_type t;
-        ds >> t;
-        if (!ds) {
-            c.clear();
-            break;
+    if (ds) {
+        SizeT n;
+        ds >> n;
+        if (ds) {
+            c.reserve(n);
+            for (SizeT i = 0; i < n; ++i) {
+                typename Container::value_type t;
+                ds >> t;
+                if (!ds) {
+                    c.clear();
+                    break;
+                }
+                c.push_back(t);
+            }
         }
-        c.push_back(t);
     }
     return ds;
 }
@@ -73,17 +84,13 @@ DataStream &readContainer(DataStream &ds, Container &c)
 template<typename T>
 DataStream &operator>>(DataStream &ds, std::vector<T> &v)
 {
-    return detail::readContainer(ds, v);
+    return detail::readContainer<uint32_t>(ds, v);
 }
 
 template<typename T>
 DataStream &operator>>(DataStream &ds, std::basic_string<T> &s)
 {
-    uint8_t n;
-    ds >> n;
-    s.resize(n);
-    ds.readBytes(s.data(), n * sizeof(T));
-    return ds;
+    return detail::readContainer<uint8_t>(ds, s);
 }
 
 template<typename T, glm::qualifier Q>
