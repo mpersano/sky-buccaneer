@@ -12,7 +12,7 @@ public:
 
     enum Program {
         Debug,
-        Phong,
+        Decal,
         Shadow,
         NumPrograms
     };

@@ -83,7 +83,7 @@ void Renderer::end()
     glViewport(0, 0, m_width, m_height);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-    m_shaderManager->useProgram(ShaderManager::Phong);
+    m_shaderManager->useProgram(ShaderManager::Decal);
     m_shaderManager->setUniform(ShaderManager::LightPosition, m_lightPosition);
     m_shaderManager->setUniform(ShaderManager::EyePosition, m_camera->eye());
     m_shaderManager->setUniform(ShaderManager::ShadowMapTexture, 0);
@@ -112,7 +112,7 @@ void Renderer::end()
         const auto *material = mesh->material();
         if (material != curMaterial) {
             if (material) {
-                m_shaderManager->useProgram(ShaderManager::Phong);
+                m_shaderManager->useProgram(ShaderManager::Decal);
                 material->bind();
             } else {
                 m_shaderManager->useProgram(ShaderManager::Debug);

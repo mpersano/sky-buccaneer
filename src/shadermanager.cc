@@ -19,7 +19,7 @@ loadProgram(ShaderManager::Program id)
     };
     static const ProgramSource programSources[] = {
         { "assets/shaders/debug.vert", "assets/shaders/debug.frag" }, // Debug
-        { "assets/shaders/phong.vert", "assets/shaders/phong.frag" }, // Phong
+        { "assets/shaders/decal.vert", "assets/shaders/decal.frag" }, // Decal
         { "assets/shaders/shadow.vert", "assets/shaders/shadow.frag" }, // Shadow
     };
     static_assert(std::extent_v<decltype(programSources)> == ShaderManager::NumPrograms, "expected number of programs to match");
