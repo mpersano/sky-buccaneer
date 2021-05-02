@@ -32,7 +32,13 @@ private:
         glm::vec3 position;
         glm::mat3 rotation;
     };
-    Player m_player;
+    Player m_playerState;
     std::unique_ptr<Level> m_level;
+    std::unique_ptr<Entity> m_playerEntity;
     double m_time = 0.0;
+    enum class CameraMode {
+        FirstPerson,
+        ThirdPerson
+    } m_cameraMode = CameraMode::ThirdPerson;
+    InputState m_prevInputState;
 };

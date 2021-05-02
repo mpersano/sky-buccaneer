@@ -10,6 +10,7 @@ enum class InputState : unsigned {
     Down = 1 << 3,
     Forward = 1 << 4,
     Reverse = 1 << 5,
+    ToggleView = 1 << 6,
 };
 
 constexpr InputState operator&(InputState x, InputState y)
