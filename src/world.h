@@ -5,6 +5,7 @@
 #include <glm/glm.hpp>
 
 #include <memory>
+#include <vector>
 
 class ShaderManager;
 class MaterialCache;
@@ -35,10 +36,15 @@ private:
     Player m_playerState;
     std::unique_ptr<Level> m_level;
     std::unique_ptr<Entity> m_playerEntity;
+    std::unique_ptr<Entity> m_explosionEntity;
     double m_time = 0.0;
     enum class CameraMode {
         FirstPerson,
         ThirdPerson
     } m_cameraMode = CameraMode::ThirdPerson;
     InputState m_prevInputState;
+    struct Explosion {
+        glm::vec3 position;
+    };
+    std::vector<Explosion> m_explosions;
 };

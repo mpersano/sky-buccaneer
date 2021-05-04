@@ -7,10 +7,12 @@
 #include "renderer.h"
 #include "shadermanager.h"
 
+#include <algorithm>
 #include <iostream>
 
 #include <GL/glew.h>
 
+#include <glm/gtc/random.hpp>
 #include <glm/gtx/string_cast.hpp>
 
 World::World()
@@ -20,12 +22,18 @@ World::World()
     , m_renderer(new Renderer(m_shaderManager.get(), m_camera.get()))
     , m_level(new Level)
     , m_playerEntity(new Entity)
+    , m_explosionEntity(new Entity)
 {
     m_playerState.position = glm::vec3(0, 0, 0);
     m_playerState.rotation = glm::mat3(1);
 
     m_level->load("assets/meshes/level.z3d", m_materialCache.get());
     m_playerEntity->load("assets/meshes/player-ship.w3d", m_materialCache.get());
+    m_explosionEntity->load("assets/meshes/fireball.w3d", m_materialCache.get());
+
+    std::generate_n(std::back_inserter(m_explosions), 20, []() -> Explosion {
+        return { glm::linearRand(glm::vec3(-10), glm::vec3(10)) };
+    });
 
     glClearColor(0, 0, 0, 0);
     glEnable(GL_CULL_FACE);
@@ -43,33 +51,34 @@ void World::resize(int width, int height)
 
 void World::render() const
 {
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     if (m_cameraMode == CameraMode::FirstPerson) {
         const auto playerDir = m_playerState.rotation[2];
         const auto playerUp = m_playerState.rotation[1];
-
         m_camera->setEye(m_playerState.position);
         m_camera->setCenter(m_playerState.position + playerDir);
         m_camera->setUp(playerUp);
-
-        m_renderer->begin();
-        m_level->render(m_renderer.get(), glm::mat4(1));
-        m_renderer->end();
     } else {
         m_camera->setEye(glm::vec3(0, 0, 0));
         m_camera->setCenter(m_playerState.position);
         m_camera->setUp(glm::vec3(0, 1, 0));
+    }
 
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+    m_renderer->begin();
+    m_level->render(m_renderer.get(), glm::mat4(1));
+    if (m_cameraMode == CameraMode::ThirdPerson) {
         const auto t = glm::translate(glm::mat4(1), m_playerState.position);
         const auto r = glm::mat4(m_playerState.rotation);
         const auto playerWorldMatrix = t * r;
-
-        m_renderer->begin();
-        m_level->render(m_renderer.get(), glm::mat4(1));
         m_playerEntity->render(m_renderer.get(), playerWorldMatrix, 0);
-        m_renderer->end();
     }
+    for (const auto &explosion : m_explosions) {
+        const auto t = glm::translate(glm::mat4(1), explosion.position);
+        const auto s = glm::scale(glm::mat4(1), glm::vec3(.5));
+        m_explosionEntity->render(m_renderer.get(), t * s, 0);
+    }
+    m_renderer->end();
 }
 
 void World::update(InputState inputState, double elapsed)
