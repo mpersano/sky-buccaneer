@@ -1,6 +1,7 @@
 #include "octree.h"
 
 #include "geometryutils.h"
+#include "material.h"
 #include "mesh.h"
 #include "renderer.h"
 
@@ -14,6 +15,12 @@
 #define DRAW_POLYGON_EDGES 1
 
 namespace OctreePrivate {
+
+const Material *debugMaterial()
+{
+    static Material material = Material(ShaderManager::Program::Debug);
+    return &material;
+}
 
 struct Plane {
     glm::vec3 point;
@@ -166,7 +173,7 @@ std::unique_ptr<Node> initializeLeafNode(const BoundingBox &box, const std::vect
 
 #if DRAW_POLYGON_EDGES
         auto edgeMesh = makeMesh(GL_LINES, vertices, edgeIndices);
-        node->meshes.push_back({ std::move(edgeMesh), nullptr });
+        node->meshes.push_back({ std::move(edgeMesh), debugMaterial() });
 #endif
     }
 
@@ -297,7 +304,7 @@ std::unique_ptr<Node> initializeNode(const BoundingBox &box, const std::vector<F
 void LeafNode::render(Renderer *renderer, const glm::mat4 &worldMatrix) const
 {
 #if DRAW_NODE_BOXES
-    renderer->render(boxMesh.get(), nullptr, worldMatrix);
+    renderer->render(boxMesh.get(), debugMaterial(), worldMatrix);
 #endif
     for (auto &m : meshes) {
         renderer->render(m.mesh.get(), m.material, worldMatrix);
@@ -307,7 +314,7 @@ void LeafNode::render(Renderer *renderer, const glm::mat4 &worldMatrix) const
 void InternalNode::render(Renderer *renderer, const glm::mat4 &worldMatrix) const
 {
 #if DRAW_NODE_BOXES
-    renderer->render(boxMesh.get(), nullptr, worldMatrix);
+    renderer->render(boxMesh.get(), debugMaterial(), worldMatrix);
 #endif
     for (auto &child : children) {
         if (child) {

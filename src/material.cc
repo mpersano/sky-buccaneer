@@ -15,25 +15,40 @@ const std::string texturePath(const std::string &basename)
 DataStream &operator>>(DataStream &ds, MaterialKey &material)
 {
     std::string name;
-    ds >> name;
+    ds >> material.name;
 
     std::string baseColorTexture;
     ds >> baseColorTexture;
 
+    material.program = ShaderManager::Program::Decal;
     material.baseColorTexture = texturePath(baseColorTexture);
 
     return ds;
 }
 
 Material::Material(const MaterialKey &materialKey)
-    : m_baseColor(new GL::Texture)
+    : Material(materialKey.program, materialKey.baseColorTexture)
 {
-    m_baseColor->load(materialKey.baseColorTexture);
+}
+
+Material::Material(ShaderManager::Program program)
+    : Material(program, std::string {})
+{
+}
+
+Material::Material(ShaderManager::Program program, const std::string &baseColor)
+    : m_program(program)
+{
+    if (!baseColor.empty()) {
+        m_baseColor = std::make_unique<GL::Texture>();
+        m_baseColor->load(baseColor);
+    }
 }
 
 Material::~Material() = default;
 
 void Material::bind() const
 {
-    m_baseColor->bind();
+    if (m_baseColor)
+        m_baseColor->bind();
 }

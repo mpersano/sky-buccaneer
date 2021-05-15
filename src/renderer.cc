@@ -101,6 +101,7 @@ void Renderer::end()
         return reinterpret_cast<std::intptr_t>(lhs.material) < reinterpret_cast<std::intptr_t>(rhs.material);
     });
 
+    std::optional<ShaderManager::Program> curProgram;
     const Material *curMaterial = nullptr;
     for (const auto &drawCall : m_drawCalls) {
 #if 0
@@ -108,20 +109,19 @@ void Renderer::end()
             continue;
         }
 #endif
-        const auto *mesh = drawCall.mesh;
         const auto *material = drawCall.material;
         if (material != curMaterial) {
-            if (material) {
-                m_shaderManager->useProgram(ShaderManager::Decal);
-                material->bind();
-            } else {
-                m_shaderManager->useProgram(ShaderManager::Debug);
+            if (const auto program = material->program(); !curProgram || *curProgram != program) {
+                m_shaderManager->useProgram(program);
+                curProgram = program;
             }
+            material->bind();
             curMaterial = material;
         }
         m_shaderManager->setUniform(ShaderManager::ModelMatrix, drawCall.worldMatrix);
         const auto normalMatrix = glm::transpose(glm::inverse(glm::mat3(drawCall.worldMatrix)));
         m_shaderManager->setUniform(ShaderManager::NormalMatrix, normalMatrix);
+        const auto *mesh = drawCall.mesh;
         mesh->render();
     }
 }
