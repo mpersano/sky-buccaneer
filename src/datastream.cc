@@ -1,18 +1,16 @@
 #include "datastream.h"
 
-#include <bit>
-
 namespace {
-constexpr bool isLittleEndian()
+bool isLittleEndian()
 {
-    union {
+    const union {
         uint32_t value;
         char bytes[4];
     } bits = { 0x12345678 };
     return bits.bytes[0] == 0x78;
 }
 
-constexpr bool needSwap()
+bool needSwap()
 {
     return !isLittleEndian();
 }
@@ -31,6 +29,7 @@ uint32_t byteSwap32(uint32_t value)
 DataStream::DataStream(const char *path)
     : m_in(fopen(path, "rb"))
     , m_error(m_in == nullptr)
+    , m_needSwap(needSwap())
 {
 }
 
@@ -53,7 +52,7 @@ DataStream &DataStream::operator>>(int8_t &value)
 DataStream &DataStream::operator>>(int16_t &value)
 {
     if (readBytes(reinterpret_cast<char *>(&value), 2) == 2) {
-        if (needSwap())
+        if (m_needSwap)
             value = byteSwap16(value);
     }
     return *this;
@@ -62,7 +61,7 @@ DataStream &DataStream::operator>>(int16_t &value)
 DataStream &DataStream::operator>>(int32_t &value)
 {
     if (readBytes(reinterpret_cast<char *>(&value), 4) == 4) {
-        if (needSwap())
+        if (m_needSwap)
             value = byteSwap32(value);
     }
     return *this;

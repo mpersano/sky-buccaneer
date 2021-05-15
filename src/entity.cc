@@ -15,14 +15,6 @@
 
 namespace {
 
-DataStream &operator>>(DataStream &ds, Mesh::Vertex &v)
-{
-    ds >> v.position;
-    ds >> v.normal;
-    ds >> v.texcoord;
-    return ds;
-}
-
 std::unique_ptr<Mesh> readMesh(DataStream &ds, const Material *material)
 {
     std::vector<Mesh::Vertex> vertices;

@@ -10,6 +10,7 @@
 #include <vector>
 
 class Material;
+class DataStream;
 
 class Mesh : private NonCopyable
 {
@@ -42,3 +43,5 @@ private:
     GLuint m_vbo[2];
     BoundingBox m_boundingBox;
 };
+
+DataStream &operator>>(DataStream &ds, Mesh::Vertex &v);

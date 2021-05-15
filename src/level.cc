@@ -12,18 +12,6 @@
 
 #include <iostream>
 
-namespace {
-
-DataStream &operator>>(DataStream &ds, Mesh::Vertex &v)
-{
-    ds >> v.position;
-    ds >> v.normal;
-    ds >> v.texcoord;
-    return ds;
-}
-
-} // namespace
-
 Level::Level()
     : m_octree(new Octree)
 {

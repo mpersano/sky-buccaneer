@@ -27,6 +27,7 @@ public:
 private:
     FILE *m_in;
     bool m_error;
+    bool m_needSwap;
 };
 
 inline DataStream &DataStream::operator>>(char &value)

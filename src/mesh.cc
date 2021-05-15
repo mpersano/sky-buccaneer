@@ -1,5 +1,7 @@
 #include "mesh.h"
 
+#include "datastream.h"
+
 #include <limits>
 #include <tuple>
 
@@ -86,4 +88,12 @@ void Mesh::render() const
 {
     VAOBinder vaoBinder(m_vao);
     glDrawElements(m_primitive, m_elementCount, GL_UNSIGNED_INT, nullptr);
+}
+
+DataStream &operator>>(DataStream &ds, Mesh::Vertex &v)
+{
+    ds >> v.position;
+    ds >> v.normal;
+    ds >> v.texcoord;
+    return ds;
 }
