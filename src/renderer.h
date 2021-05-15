@@ -8,6 +8,7 @@
 #include "camera.h"
 
 class Mesh;
+class Material;
 
 namespace GL {
 class ShadowBuffer;
@@ -25,7 +26,7 @@ public:
     void resize(int width, int height);
 
     void begin();
-    void render(const Mesh *mesh, const glm::mat4 &worldMatrix);
+    void render(const Mesh *mesh, const Material *material, const glm::mat4 &worldMatrix);
     void end();
 
 private:
@@ -34,8 +35,9 @@ private:
     glm::vec3 m_lightPosition;
     std::unique_ptr<GL::ShadowBuffer> m_shadowBuffer;
     struct DrawCall {
-        glm::mat4 worldMatrix;
         const Mesh *mesh;
+        const Material *material;
+        glm::mat4 worldMatrix;
     };
     std::vector<DrawCall> m_drawCalls;
     ShaderManager *m_shaderManager;

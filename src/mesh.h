@@ -9,13 +9,12 @@
 
 #include <vector>
 
-class Material;
 class DataStream;
 
 class Mesh : private NonCopyable
 {
 public:
-    explicit Mesh(const Material *material, GLenum primitive = GL_TRIANGLES);
+    explicit Mesh(GLenum primitive = GL_TRIANGLES);
     ~Mesh();
 
     struct Vertex {
@@ -30,13 +29,10 @@ public:
 
     const BoundingBox &boundingBox() const { return m_boundingBox; }
 
-    const Material *material() const { return m_material; }
-
 private:
     void initializeBuffers(const std::vector<Vertex> &vertices, const std::vector<unsigned> &indices);
     void initializeBoundingBox(const std::vector<Vertex> &vertices);
 
-    const Material *m_material;
     GLenum m_primitive;
     int m_elementCount = 0;
     GLuint m_vao;

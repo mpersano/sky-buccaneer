@@ -26,9 +26,8 @@ bool Mesh::Vertex::operator==(const Vertex &other) const
     return std::tie(position, normal, texcoord) == std::tie(other.position, other.normal, other.texcoord);
 }
 
-Mesh::Mesh(const Material *material, GLenum primitive)
-    : m_material(material)
-    , m_primitive(primitive)
+Mesh::Mesh(GLenum primitive)
+    : m_primitive(primitive)
 {
     glGenBuffers(2, m_vbo);
     glGenVertexArrays(1, &m_vao);

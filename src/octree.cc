@@ -31,7 +31,11 @@ struct Node {
 
 struct LeafNode : Node {
     void render(Renderer *renderer, const glm::mat4 &worldMatrix) const override;
-    std::vector<std::unique_ptr<Mesh>> meshes;
+    struct MeshMaterial {
+        std::unique_ptr<Mesh> mesh;
+        const Material *material;
+    };
+    std::vector<MeshMaterial> meshes;
 };
 
 struct InternalNode : Node {
@@ -157,14 +161,14 @@ std::unique_ptr<Node> initializeLeafNode(const BoundingBox &box, const std::vect
 #endif
         }
 
-        auto mesh = std::make_unique<Mesh>(material);
+        auto mesh = std::make_unique<Mesh>();
         mesh->setData(vertices, indices);
-        node->meshes.push_back(std::move(mesh));
+        node->meshes.push_back({ std::move(mesh), material });
 
 #if DRAW_POLYGON_EDGES
-        auto edgeMesh = std::make_unique<Mesh>(nullptr, GL_LINES);
+        auto edgeMesh = std::make_unique<Mesh>(GL_LINES);
         edgeMesh->setData(vertices, edgeIndices);
-        node->meshes.push_back(std::move(edgeMesh));
+        node->meshes.push_back({ std::move(edgeMesh), nullptr });
 #endif
     }
 
@@ -286,7 +290,7 @@ std::unique_ptr<Node> initializeNode(const BoundingBox &box, const std::vector<F
         2, 6,
         3, 7
     };
-    node->boxMesh = std::make_unique<Mesh>(nullptr, GL_LINES);
+    node->boxMesh = std::make_unique<Mesh>(GL_LINES);
     node->boxMesh->setData(boxVerts, boxIndices);
 #endif
 
@@ -296,17 +300,17 @@ std::unique_ptr<Node> initializeNode(const BoundingBox &box, const std::vector<F
 void LeafNode::render(Renderer *renderer, const glm::mat4 &worldMatrix) const
 {
 #if DRAW_NODE_BOXES
-    renderer->render(boxMesh.get(), worldMatrix);
+    renderer->render(boxMesh.get(), nullptr, worldMatrix);
 #endif
-    for (auto &mesh : meshes) {
-        renderer->render(mesh.get(), worldMatrix);
+    for (auto &m : meshes) {
+        renderer->render(m.mesh.get(), m.material, worldMatrix);
     }
 }
 
 void InternalNode::render(Renderer *renderer, const glm::mat4 &worldMatrix) const
 {
 #if DRAW_NODE_BOXES
-    renderer->render(boxMesh.get(), worldMatrix);
+    renderer->render(boxMesh.get(), nullptr, worldMatrix);
 #endif
     for (auto &child : children) {
         if (child) {

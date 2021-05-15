@@ -15,7 +15,7 @@
 
 namespace {
 
-std::unique_ptr<Mesh> readMesh(DataStream &ds, const Material *material)
+std::unique_ptr<Mesh> readMesh(DataStream &ds)
 {
     std::vector<Mesh::Vertex> vertices;
     ds >> vertices;
@@ -31,7 +31,7 @@ std::unique_ptr<Mesh> readMesh(DataStream &ds, const Material *material)
         indices.push_back(index);
     }
 
-    std::unique_ptr<Mesh> mesh(new Mesh(material));
+    auto mesh = std::make_unique<Mesh>();
     mesh->setData(vertices, indices);
     return mesh;
 }
@@ -146,9 +146,11 @@ void Entity::load(const char *filepath, MaterialCache *materialCache)
             node->meshes.reserve(meshCount);
 
             for (int i = 0; i < meshCount; ++i) {
-                MaterialKey material;
-                ds >> material;
-                node->meshes.push_back(readMesh(ds, materialCache->cachedMaterial(material)));
+                MaterialKey materialKey;
+                ds >> materialKey;
+                auto mesh = readMesh(ds);
+                const auto *material = materialCache->cachedMaterial(materialKey);
+                node->meshes.push_back({ std::move(mesh), material });
             }
         }
     }
@@ -221,7 +223,7 @@ void Entity::Node::render(Renderer *renderer, const glm::mat4 &parentWorldMatrix
     const auto localMatrix = composeTransformMatrix(translation, rotation, scale);
     const auto worldMatrix = parentWorldMatrix * localMatrix;
     for (const auto &m : meshes) {
-        renderer->render(m.get(), worldMatrix);
+        renderer->render(m.mesh.get(), m.material, worldMatrix);
     }
     for (const auto *child : children) {
         child->render(renderer, worldMatrix, frame);

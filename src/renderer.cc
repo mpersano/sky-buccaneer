@@ -41,9 +41,9 @@ void Renderer::begin()
     m_drawCalls.clear();
 }
 
-void Renderer::render(const Mesh *mesh, const glm::mat4 &worldMatrix)
+void Renderer::render(const Mesh *mesh, const Material *material, const glm::mat4 &worldMatrix)
 {
-    m_drawCalls.push_back({ worldMatrix, mesh });
+    m_drawCalls.push_back({ mesh, material, worldMatrix });
 }
 
 void Renderer::end()
@@ -98,7 +98,7 @@ void Renderer::end()
     const auto &frustum = m_camera->frustum();
 
     std::sort(m_drawCalls.begin(), m_drawCalls.end(), [](const auto &lhs, const auto &rhs) {
-        return reinterpret_cast<std::intptr_t>(lhs.mesh->material()) < reinterpret_cast<std::intptr_t>(rhs.mesh->material());
+        return reinterpret_cast<std::intptr_t>(lhs.material) < reinterpret_cast<std::intptr_t>(rhs.material);
     });
 
     const Material *curMaterial = nullptr;
@@ -109,7 +109,7 @@ void Renderer::end()
         }
 #endif
         const auto *mesh = drawCall.mesh;
-        const auto *material = mesh->material();
+        const auto *material = drawCall.material;
         if (material != curMaterial) {
             if (material) {
                 m_shaderManager->useProgram(ShaderManager::Decal);

@@ -6,11 +6,12 @@
 #include <vector>
 
 class Mesh;
+class Material;
 class Renderer;
 class MaterialCache;
 class Octree;
 
-#define DRAW_RAW_LEVEL_MESHES 0
+#define DRAW_RAW_LEVEL_MESHES 1
 
 class Level
 {
@@ -23,7 +24,11 @@ public:
 
 private:
 #if DRAW_RAW_LEVEL_MESHES
-    std::vector<std::unique_ptr<Mesh>> m_meshes;
+    struct MeshMaterial {
+        std::unique_ptr<Mesh> mesh;
+        const Material *material;
+    };
+    std::vector<MeshMaterial> m_meshes;
 #endif
     std::unique_ptr<Octree> m_octree;
 };

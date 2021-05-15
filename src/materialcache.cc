@@ -10,7 +10,7 @@ std::size_t MaterialCache::KeyHasher::operator()(const MaterialKey &key) const
     return std::hash<std::string>()(key.baseColorTexture);
 }
 
-Material *MaterialCache::cachedMaterial(const MaterialKey &key)
+const Material *MaterialCache::cachedMaterial(const MaterialKey &key)
 {
     auto it = m_cachedMaterials.find(key);
     if (it == m_cachedMaterials.end()) {

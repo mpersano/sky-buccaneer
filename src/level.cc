@@ -76,9 +76,9 @@ void Level::load(const char *filepath, MaterialCache *materialCache)
         std::cout << glm::to_string(vertices[0].position) << ' ' << glm::to_string(vertices[1].position) << '\n';
 
 #if DRAW_RAW_LEVEL_MESHES
-        std::unique_ptr<Mesh> mesh(new Mesh(material));
+        auto mesh = std::make_unique<Mesh>();
         mesh->setData(vertices, indices);
-        m_meshes.push_back(std::move(mesh));
+        m_meshes.push_back({ std::move(mesh), material });
 #endif
     }
 
@@ -89,7 +89,7 @@ void Level::render(Renderer *renderer, const glm::mat4 &worldMatrix) const
 {
 #if DRAW_RAW_LEVEL_MESHES
     for (const auto &m : m_meshes) {
-        renderer->render(m.get(), worldMatrix);
+        renderer->render(m.mesh.get(), m.material, worldMatrix);
     }
 #else
     m_octree->render(renderer, worldMatrix);

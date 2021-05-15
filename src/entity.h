@@ -8,6 +8,7 @@
 #include "transform.h"
 
 class Mesh;
+class Material;
 class Renderer;
 class MaterialCache;
 
@@ -40,7 +41,11 @@ private:
         Transform transform;
         const Node *parent = nullptr;
         std::vector<const Node *> children;
-        std::vector<std::unique_ptr<Mesh>> meshes;
+        struct MeshMaterial {
+            std::unique_ptr<Mesh> mesh;
+            const Material *material;
+        };
+        std::vector<MeshMaterial> meshes;
         std::vector<std::unique_ptr<Action>> actions;
         const Action *activeAction = nullptr;
     };

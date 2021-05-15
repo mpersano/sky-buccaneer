@@ -11,7 +11,7 @@ public:
     MaterialCache();
     ~MaterialCache();
 
-    Material *cachedMaterial(const MaterialKey &key);
+    const Material *cachedMaterial(const MaterialKey &key);
 
 private:
     struct KeyHasher {
