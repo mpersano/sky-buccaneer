@@ -17,7 +17,7 @@ namespace {
 
 std::unique_ptr<Mesh> readMesh(DataStream &ds)
 {
-    std::vector<Mesh::Vertex> vertices;
+    std::vector<MeshVertex> vertices;
     ds >> vertices;
 
     uint32_t triangleCount;
@@ -31,9 +31,7 @@ std::unique_ptr<Mesh> readMesh(DataStream &ds)
         indices.push_back(index);
     }
 
-    auto mesh = std::make_unique<Mesh>();
-    mesh->setData(vertices, indices);
-    return mesh;
+    return makeMesh(GL_TRIANGLES, vertices, indices);
 }
 
 template<typename SampleT>

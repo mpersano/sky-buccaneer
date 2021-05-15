@@ -1,6 +1,6 @@
 #include "frustum.h"
 
-#include "mesh.h"
+#include "geometryutils.h"
 
 #include <algorithm>
 

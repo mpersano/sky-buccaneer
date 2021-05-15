@@ -37,7 +37,7 @@ void Level::load(const char *filepath, MaterialCache *materialCache)
         ds >> materialKey;
         const auto *material = materialCache->cachedMaterial(materialKey);
 
-        std::vector<Mesh::Vertex> vertices;
+        std::vector<MeshVertex> vertices;
         ds >> vertices;
 
         uint32_t faceCount;
@@ -76,8 +76,7 @@ void Level::load(const char *filepath, MaterialCache *materialCache)
         std::cout << glm::to_string(vertices[0].position) << ' ' << glm::to_string(vertices[1].position) << '\n';
 
 #if DRAW_RAW_LEVEL_MESHES
-        auto mesh = std::make_unique<Mesh>();
-        mesh->setData(vertices, indices);
+        auto mesh = makeMesh(GL_TRIANGLES, vertices, indices);
         m_meshes.push_back({ std::move(mesh), material });
 #endif
     }

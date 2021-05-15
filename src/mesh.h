@@ -2,11 +2,10 @@
 
 #include "noncopyable.h"
 
-#include "geometryutils.h" // BoundingBox
-
 #include <GL/glew.h>
 #include <glm/glm.hpp>
 
+#include <memory>
 #include <vector>
 
 class DataStream;
@@ -14,30 +13,45 @@ class DataStream;
 class Mesh : private NonCopyable
 {
 public:
-    explicit Mesh(GLenum primitive = GL_TRIANGLES);
-    ~Mesh();
+    using IndexType = unsigned;
 
-    struct Vertex {
-        glm::vec3 position;
-        glm::vec3 normal;
-        glm::vec2 texcoord;
-        bool operator==(const Vertex &other) const;
+    Mesh(GLenum primitive = GL_TRIANGLES);
+    virtual ~Mesh();
+
+    void setVertexCount(unsigned count);
+    void setVertexSize(unsigned size);
+    void setIndexCount(unsigned count);
+    struct VertexAttribute {
+        unsigned componentCount;
+        GLenum type;
+        unsigned offset;
     };
-    void setData(const std::vector<Vertex> &vertices, const std::vector<unsigned> &indices);
+    void setVertexAttributes(const std::vector<VertexAttribute> &attributes);
+
+    void initialize();
+    void setVertexData(const void *data); // is this polymorphism?
+    void setIndexData(const void *data);
 
     void render() const;
 
-    const BoundingBox &boundingBox() const { return m_boundingBox; }
-
 private:
-    void initializeBuffers(const std::vector<Vertex> &vertices, const std::vector<unsigned> &indices);
-    void initializeBoundingBox(const std::vector<Vertex> &vertices);
-
     GLenum m_primitive;
-    int m_elementCount = 0;
-    GLuint m_vao;
-    GLuint m_vbo[2];
-    BoundingBox m_boundingBox;
+    unsigned m_vertexCount = 0;
+    unsigned m_vertexSize = 0;
+    unsigned m_indexCount = 0;
+    std::vector<VertexAttribute> m_attributes;
+    GLuint m_vertexBuffer = 0;
+    GLuint m_indexBuffer = 0;
+    GLuint m_vertexArray = 0;
 };
 
-DataStream &operator>>(DataStream &ds, Mesh::Vertex &v);
+struct MeshVertex {
+    glm::vec3 position;
+    glm::vec3 normal;
+    glm::vec2 texcoord;
+    bool operator==(const MeshVertex &other) const;
+};
+
+DataStream &operator>>(DataStream &ds, MeshVertex &v);
+
+std::unique_ptr<Mesh> makeMesh(GLenum primitive, const std::vector<MeshVertex> &vertices, const std::vector<Mesh::IndexType> &indices);

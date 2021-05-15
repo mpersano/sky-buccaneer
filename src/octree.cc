@@ -80,7 +80,7 @@ auto split(const Face &face, const Plane &plane)
 std::unique_ptr<Node> initializeNode(const BoundingBox &box, const std::vector<Face> &faces);
 
 struct VertexHasher {
-    std::size_t operator()(const Mesh::Vertex &vertex) const
+    std::size_t operator()(const MeshVertex &vertex) const
     {
         std::hash<float> hasher;
 
@@ -117,11 +117,11 @@ std::unique_ptr<Node> initializeLeafNode(const BoundingBox &box, const std::vect
 
     for (const auto *material : materials) {
         const auto toMeshVertex = [](const Face::Vertex &faceVertex) {
-            return Mesh::Vertex { faceVertex.position, faceVertex.normal, faceVertex.texcoord };
+            return MeshVertex { faceVertex.position, faceVertex.normal, faceVertex.texcoord };
         };
 
-        std::vector<Mesh::Vertex> vertices;
-        std::unordered_map<Mesh::Vertex, int, VertexHasher> vertexIndex;
+        std::vector<MeshVertex> vertices;
+        std::unordered_map<MeshVertex, int, VertexHasher> vertexIndex;
         for (auto &face : faces) {
             if (face.material != material) {
                 continue;
@@ -161,13 +161,11 @@ std::unique_ptr<Node> initializeLeafNode(const BoundingBox &box, const std::vect
 #endif
         }
 
-        auto mesh = std::make_unique<Mesh>();
-        mesh->setData(vertices, indices);
+        auto mesh = makeMesh(GL_TRIANGLES, vertices, indices);
         node->meshes.push_back({ std::move(mesh), material });
 
 #if DRAW_POLYGON_EDGES
-        auto edgeMesh = std::make_unique<Mesh>(GL_LINES);
-        edgeMesh->setData(vertices, edgeIndices);
+        auto edgeMesh = makeMesh(GL_LINES, vertices, edgeIndices);
         node->meshes.push_back({ std::move(edgeMesh), nullptr });
 #endif
     }
@@ -269,12 +267,12 @@ std::unique_ptr<Node> initializeNode(const BoundingBox &box, const std::vector<F
     assert(node);
 
 #if DRAW_NODE_BOXES
-    std::vector<Mesh::Vertex> boxVerts(8);
+    std::vector<MeshVertex> boxVerts(8);
     for (int i = 0; i < 8; ++i) {
         float x = ((i & 1) == 0) ? box.min.x : box.max.x;
         float y = ((i & 2) == 0) ? box.min.y : box.max.y;
         float z = ((i & 4) == 0) ? box.min.z : box.max.z;
-        boxVerts[i] = Mesh::Vertex { glm::vec3(x, y, z), {}, {} };
+        boxVerts[i] = MeshVertex { glm::vec3(x, y, z), {}, {} };
     }
     std::vector<unsigned> boxIndices = {
         0, 1,
@@ -290,8 +288,7 @@ std::unique_ptr<Node> initializeNode(const BoundingBox &box, const std::vector<F
         2, 6,
         3, 7
     };
-    node->boxMesh = std::make_unique<Mesh>(GL_LINES);
-    node->boxMesh->setData(boxVerts, boxIndices);
+    node->boxMesh = makeMesh(GL_LINES, boxVerts, boxIndices);
 #endif
 
     return node;

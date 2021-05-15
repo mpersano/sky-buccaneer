@@ -21,78 +21,123 @@ struct VAOBinder : NonCopyable {
 
 } // namespace
 
-bool Mesh::Vertex::operator==(const Vertex &other) const
-{
-    return std::tie(position, normal, texcoord) == std::tie(other.position, other.normal, other.texcoord);
-}
-
 Mesh::Mesh(GLenum primitive)
     : m_primitive(primitive)
 {
-    glGenBuffers(2, m_vbo);
-    glGenVertexArrays(1, &m_vao);
 }
 
 Mesh::~Mesh()
 {
-    glDeleteBuffers(2, m_vbo);
-    glDeleteVertexArrays(1, &m_vao);
+    glDeleteBuffers(1, &m_vertexBuffer);
+    glDeleteBuffers(1, &m_indexBuffer);
+    glDeleteVertexArrays(1, &m_vertexArray);
 }
 
-void Mesh::setData(const std::vector<Vertex> &vertices, const std::vector<unsigned> &indices)
+void Mesh::setVertexCount(unsigned count)
 {
-    m_elementCount = indices.size();
-
-    initializeBoundingBox(vertices);
-    initializeBuffers(vertices, indices);
+    m_vertexCount = count;
 }
 
-void Mesh::initializeBuffers(const std::vector<Vertex> &vertices, const std::vector<unsigned> &indices)
+void Mesh::setVertexSize(unsigned size)
 {
-    VAOBinder vaoBinder(m_vao);
-
-    glBindBuffer(GL_ARRAY_BUFFER, m_vbo[0]);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(Vertex) * vertices.size(), vertices.data(), GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_vbo[1]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(unsigned) * indices.size(), indices.data(), GL_STATIC_DRAW);
-
-    static_assert(sizeof(glm::vec3) == 3 * sizeof(GLfloat));
-    static_assert(sizeof(glm::vec2) == 2 * sizeof(GLfloat));
-
-    constexpr auto Stride = sizeof(Vertex);
-    static_assert(Stride == 8 * sizeof(GLfloat));
-
-    // position
-    glEnableVertexAttribArray(0);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, Stride, reinterpret_cast<GLvoid *>(offsetof(Vertex, position)));
-
-    // normal
-    glEnableVertexAttribArray(1);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, Stride, reinterpret_cast<GLvoid *>(offsetof(Vertex, normal)));
-
-    // uv
-    glEnableVertexAttribArray(2);
-    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, Stride, reinterpret_cast<GLvoid *>(offsetof(Vertex, texcoord)));
+    m_vertexSize = size;
 }
 
-void Mesh::initializeBoundingBox(const std::vector<Vertex> &vertices)
+void Mesh::setIndexCount(unsigned count)
 {
-    for (const auto &v : vertices) {
-        m_boundingBox |= v.position;
+    m_indexCount = count;
+}
+
+void Mesh::setVertexAttributes(const std::vector<VertexAttribute> &attributes)
+{
+    m_attributes = attributes;
+}
+
+void Mesh::initialize()
+{
+    assert(m_vertexCount > 0);
+    assert(m_vertexSize > 0);
+    assert(!m_attributes.empty());
+
+    glGenBuffers(1, &m_vertexBuffer);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
+    glBufferData(GL_ARRAY_BUFFER, m_vertexSize * m_vertexCount, nullptr, GL_STATIC_DRAW);
+
+    if (m_indexCount > 0) {
+        glGenBuffers(1, &m_indexBuffer);
+        glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
+        glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(IndexType) * m_indexCount, nullptr, GL_STATIC_DRAW);
     }
+
+    glGenVertexArrays(1, &m_vertexArray);
+
+    VAOBinder vaoBinder(m_vertexArray);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
+
+    int index = 0;
+    for (const auto &attribute : m_attributes) {
+        glEnableVertexAttribArray(index);
+        glVertexAttribPointer(index, attribute.componentCount, attribute.type, GL_FALSE, m_vertexSize, reinterpret_cast<GLvoid *>(attribute.offset));
+        ++index;
+    }
+}
+
+void Mesh::setVertexData(const void *data)
+{
+    assert(m_vertexBuffer != 0);
+    glBindBuffer(GL_ARRAY_BUFFER, m_vertexBuffer);
+    glBufferSubData(GL_ARRAY_BUFFER, 0, m_vertexSize * m_vertexCount, data);
+}
+
+void Mesh::setIndexData(const void *data)
+{
+    assert(m_indexBuffer != 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_indexBuffer);
+    glBufferSubData(GL_ELEMENT_ARRAY_BUFFER, 0, sizeof(IndexType) * m_indexCount, data);
 }
 
 void Mesh::render() const
 {
-    VAOBinder vaoBinder(m_vao);
-    glDrawElements(m_primitive, m_elementCount, GL_UNSIGNED_INT, nullptr);
+    VAOBinder vaoBinder(m_vertexArray);
+    if (m_indexBuffer != 0)
+        glDrawElements(m_primitive, m_indexCount, GL_UNSIGNED_INT, nullptr);
+    else
+        glDrawArrays(m_primitive, 0, m_vertexCount);
 }
 
-DataStream &operator>>(DataStream &ds, Mesh::Vertex &v)
+bool MeshVertex::operator==(const MeshVertex &other) const
+{
+    return std::tie(position, normal, texcoord) == std::tie(other.position, other.normal, other.texcoord);
+}
+
+DataStream &operator>>(DataStream &ds, MeshVertex &v)
 {
     ds >> v.position;
     ds >> v.normal;
     ds >> v.texcoord;
     return ds;
+}
+
+std::unique_ptr<Mesh> makeMesh(GLenum primitive, const std::vector<MeshVertex> &vertices, const std::vector<Mesh::IndexType> &indices)
+{
+    auto mesh = std::make_unique<Mesh>(primitive);
+
+    static const std::vector<Mesh::VertexAttribute> attributes = {
+        { 3, GL_FLOAT, offsetof(MeshVertex, position) },
+        { 3, GL_FLOAT, offsetof(MeshVertex, normal) },
+        { 2, GL_FLOAT, offsetof(MeshVertex, texcoord) },
+    };
+
+    mesh->setVertexCount(vertices.size());
+    mesh->setVertexSize(sizeof(MeshVertex));
+    mesh->setIndexCount(indices.size());
+    mesh->setVertexAttributes(attributes);
+
+    mesh->initialize();
+
+    mesh->setVertexData(vertices.data());
+    mesh->setIndexData(indices.data());
+
+    return mesh;
 }
