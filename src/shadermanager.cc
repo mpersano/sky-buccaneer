@@ -14,22 +14,35 @@ loadProgram(ShaderManager::Program id)
                             Colored };
     struct ProgramSource {
         const char *vertexShader;
+        const char *geometryShader;
         const char *fragmentShader;
         VertexType vertexType;
     };
     static const ProgramSource programSources[] = {
-        { "assets/shaders/debug.vert", "assets/shaders/debug.frag" }, // Debug
-        { "assets/shaders/decal.vert", "assets/shaders/decal.frag" }, // Decal
-        { "assets/shaders/shadow.vert", "assets/shaders/shadow.frag" }, // Shadow
+        { "debug.vert", nullptr, "debug.frag" }, // Debug
+        { "decal.vert", nullptr, "decal.frag" }, // Decal
+        { "shadow.vert", nullptr, "shadow.frag" }, // Shadow
+        { "billboard.vert", "billboard.geom", "billboard.frag" }, // Billboard
     };
     static_assert(std::extent_v<decltype(programSources)> == ShaderManager::NumPrograms, "expected number of programs to match");
+
+    const auto shaderPath = [](std::string_view name) {
+        return std::string("assets/shaders/") + std::string(name);
+    };
+
     const auto &sources = programSources[id];
     std::unique_ptr<GL::ShaderProgram> program(new GL::ShaderProgram);
-    if (!program->addShader(GL_VERTEX_SHADER, sources.vertexShader)) {
+    if (!program->addShader(GL_VERTEX_SHADER, shaderPath(sources.vertexShader))) {
         spdlog::warn("Failed to add vertex shader for program {}: {}", id, program->log());
         return {};
     }
-    if (!program->addShader(GL_FRAGMENT_SHADER, sources.fragmentShader)) {
+    if (sources.geometryShader) {
+        if (!program->addShader(GL_GEOMETRY_SHADER, shaderPath(sources.geometryShader))) {
+            spdlog::warn("Failed to add geometry shader for program {}: {}", id, program->log());
+            return {};
+        }
+    }
+    if (!program->addShader(GL_FRAGMENT_SHADER, shaderPath(sources.fragmentShader))) {
         spdlog::warn("Failed to add fragment shader for program {}: {}", id, program->log());
         return {};
     }

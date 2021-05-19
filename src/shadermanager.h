@@ -14,6 +14,7 @@ public:
         Debug,
         Decal,
         Shadow,
+        Billboard,
         NumPrograms
     };
     void useProgram(Program program);
@@ -36,7 +37,10 @@ public:
     {
         if (!m_currentProgram)
             return;
-        m_currentProgram->program->setUniform(uniformLocation(uniform), std::forward<T>(value));
+        const auto location = uniformLocation(uniform);
+        if (location == -1)
+            return;
+        m_currentProgram->program->setUniform(location, std::forward<T>(value));
     }
 
 private:

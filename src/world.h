@@ -11,6 +11,7 @@ class ShaderManager;
 class MaterialCache;
 class Renderer;
 class Entity;
+class Mesh;
 class Level;
 class Camera;
 
@@ -37,6 +38,7 @@ private:
     std::unique_ptr<Level> m_level;
     std::unique_ptr<Entity> m_playerEntity;
     std::unique_ptr<Entity> m_explosionEntity;
+    std::unique_ptr<Mesh> m_bulletsMesh;
     double m_time = 0.0;
     enum class CameraMode {
         FirstPerson,

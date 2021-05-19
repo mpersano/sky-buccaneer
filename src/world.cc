@@ -4,6 +4,7 @@
 #include "entity.h"
 #include "level.h"
 #include "materialcache.h"
+#include "mesh.h"
 #include "renderer.h"
 #include "shadermanager.h"
 
@@ -15,6 +16,48 @@
 #include <glm/gtc/random.hpp>
 #include <glm/gtx/string_cast.hpp>
 
+namespace {
+struct BulletState {
+    glm::vec3 position;
+    glm::vec3 velocity;
+};
+
+constexpr const auto BulletCount = 200;
+
+std::unique_ptr<Mesh> makeBulletMesh()
+{
+    auto mesh = std::make_unique<Mesh>(GL_POINTS);
+
+    static const std::vector<Mesh::VertexAttribute> attributes = {
+        { 3, GL_FLOAT, offsetof(BulletState, position) },
+        { 3, GL_FLOAT, offsetof(BulletState, velocity) },
+    };
+
+    mesh->setVertexCount(BulletCount);
+    mesh->setVertexSize(sizeof(BulletState));
+    mesh->setVertexAttributes(attributes);
+
+    mesh->initialize();
+
+    std::vector<BulletState> bullets;
+    std::generate_n(std::back_inserter(bullets), BulletCount, []() -> BulletState {
+        const auto position = glm::linearRand(glm::vec3(-20), glm::vec3(20));
+        const auto speed = glm::vec3(1, 0, 0);
+        return { position, speed };
+    });
+
+    mesh->setVertexData(bullets.data());
+
+    return mesh;
+}
+
+const Material *bulletMaterial()
+{
+    static const auto material = Material(ShaderManager::Program::Billboard);
+    return &material;
+}
+} // namespace
+
 World::World()
     : m_shaderManager(new ShaderManager)
     , m_materialCache(new MaterialCache)
@@ -23,6 +66,7 @@ World::World()
     , m_level(new Level)
     , m_playerEntity(new Entity)
     , m_explosionEntity(new Entity)
+    , m_bulletsMesh(makeBulletMesh())
 {
     m_playerState.position = glm::vec3(0, 0, 0);
     m_playerState.rotation = glm::mat3(1);
@@ -46,7 +90,6 @@ void World::resize(int width, int height)
 {
     m_camera->setAspectRatio(static_cast<float>(width) / height);
     m_renderer->resize(width, height);
-    glViewport(0, 0, width, height);
 }
 
 void World::render() const
@@ -78,6 +121,7 @@ void World::render() const
         const auto s = glm::scale(glm::mat4(1), glm::vec3(.5));
         m_explosionEntity->render(m_renderer.get(), t * s, 0);
     }
+    m_renderer->render(m_bulletsMesh.get(), bulletMaterial(), glm::mat4(1));
     m_renderer->end();
 }
 

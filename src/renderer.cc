@@ -95,6 +95,11 @@ void Renderer::end()
     m_shaderManager->setUniform(ShaderManager::ProjectionMatrix, m_camera->projectionMatrix());
     m_shaderManager->setUniform(ShaderManager::ViewMatrix, m_camera->viewMatrix());
 
+    m_shaderManager->useProgram(ShaderManager::Billboard);
+    m_shaderManager->setUniform(ShaderManager::ViewMatrix, m_camera->viewMatrix());
+    m_shaderManager->setUniform(ShaderManager::ProjectionMatrix, m_camera->projectionMatrix());
+    m_shaderManager->setUniform(ShaderManager::EyePosition, m_camera->eye());
+
     const auto &frustum = m_camera->frustum();
 
     std::sort(m_drawCalls.begin(), m_drawCalls.end(), [](const auto &lhs, const auto &rhs) {
