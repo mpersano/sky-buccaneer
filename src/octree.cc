@@ -18,7 +18,7 @@ namespace OctreePrivate {
 
 const Material *debugMaterial()
 {
-    static Material material = Material(ShaderManager::Program::Debug);
+    static const auto material = Material(ShaderManager::Program::Debug);
     return &material;
 }
 
