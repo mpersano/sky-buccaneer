@@ -128,7 +128,8 @@ void GameWindow::key(int key, int scancode, int action, int mode)
         UPDATE_INPUT_STATE(GLFW_KEY_DOWN, Down)
         UPDATE_INPUT_STATE(GLFW_KEY_A, Forward)
         UPDATE_INPUT_STATE(GLFW_KEY_Z, Reverse)
-        UPDATE_INPUT_STATE(GLFW_KEY_SPACE, ToggleView)
+        UPDATE_INPUT_STATE(GLFW_KEY_SPACE, Fire)
+        UPDATE_INPUT_STATE(GLFW_KEY_GRAVE_ACCENT, ToggleView)
 #undef UPDATE_INPUT_STATE
     default:
         break;

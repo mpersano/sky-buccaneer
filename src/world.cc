@@ -22,7 +22,7 @@ struct BulletState {
     glm::vec3 velocity;
 };
 
-constexpr const auto BulletCount = 200;
+constexpr const auto MaxBullets = 200;
 
 std::unique_ptr<Mesh> makeBulletMesh()
 {
@@ -33,20 +33,10 @@ std::unique_ptr<Mesh> makeBulletMesh()
         { 3, GL_FLOAT, offsetof(BulletState, velocity) },
     };
 
-    mesh->setVertexCount(BulletCount);
+    mesh->setVertexCount(MaxBullets);
     mesh->setVertexSize(sizeof(BulletState));
     mesh->setVertexAttributes(attributes);
-
     mesh->initialize();
-
-    std::vector<BulletState> bullets;
-    std::generate_n(std::back_inserter(bullets), BulletCount, []() -> BulletState {
-        const auto position = glm::linearRand(glm::vec3(-20), glm::vec3(20));
-        const auto speed = glm::vec3(1, 0, 0);
-        return { position, speed };
-    });
-
-    mesh->setVertexData(bullets.data());
 
     return mesh;
 }
@@ -121,13 +111,42 @@ void World::render() const
         const auto s = glm::scale(glm::mat4(1), glm::vec3(.5));
         m_explosionEntity->render(m_renderer.get(), t * s, 0);
     }
-    m_renderer->render(m_bulletsMesh.get(), bulletMaterial(), glm::mat4(1));
+    if (!m_bullets.empty()) {
+        std::vector<BulletState> bulletData;
+        std::transform(m_bullets.begin(), m_bullets.end(), std::back_inserter(bulletData), [](const Bullet &bullet) -> BulletState {
+            return { bullet.position, bullet.velocity };
+        });
+        m_bulletsMesh->setVertexCount(m_bullets.size());
+        m_bulletsMesh->setVertexData(bulletData.data());
+        m_renderer->render(m_bulletsMesh.get(), bulletMaterial(), glm::mat4(1));
+    }
     m_renderer->end();
 }
 
-void World::update(InputState inputState, double elapsed)
+void World::update(InputState inputState, float elapsed)
 {
-    m_time += elapsed;
+    updateBullets(elapsed);
+    updatePlayer(inputState, elapsed);
+}
+
+void World::updateBullets(float elapsed)
+{
+    auto it = m_bullets.begin();
+    while (it != m_bullets.end()) {
+        auto &bullet = *it;
+        bullet.lifetime -= elapsed;
+        if (bullet.lifetime < 0.0) {
+            it = m_bullets.erase(it);
+            continue;
+        }
+        bullet.position += bullet.velocity;
+        ++it;
+    }
+}
+
+void World::updatePlayer(InputState inputState, float elapsed)
+{
+    m_fireDelay = std::max(m_fireDelay - elapsed, 0.0f);
 
     const auto rotatePlayer = [this](float angle, const glm::vec3 &axis) {
         const auto r = glm::mat3(glm::rotate(glm::mat4(1), angle, axis));
@@ -170,8 +189,31 @@ void World::update(InputState inputState, double elapsed)
         const auto offset = elapsed * -Speed;
         movePlayer(offset);
     }
+    if (testFlag(InputState::Fire)) {
+        fire();
+    }
     if (testFlag(InputState::ToggleView) && (m_prevInputState & InputState::ToggleView) == InputState::None) {
         m_cameraMode = m_cameraMode == CameraMode::FirstPerson ? CameraMode::ThirdPerson : CameraMode::FirstPerson;
     }
     m_prevInputState = inputState;
+}
+
+void World::fire()
+{
+    if (m_fireDelay > 0.0f || m_bullets.size() >= MaxBullets)
+        return;
+
+    constexpr auto BulletSpeed = 1.5f;
+    constexpr auto FireInterval = 0.2f;
+    constexpr auto BulletDuration = 5.0;
+
+    const auto offset = glm::vec3(0.5, -0.5, -2.5);
+
+    Bullet bullet;
+    bullet.position = m_playerState.position + m_playerState.rotation * offset;
+    bullet.velocity = BulletSpeed * m_playerState.rotation[2];
+    bullet.lifetime = BulletDuration;
+    m_bullets.push_back(bullet);
+
+    m_fireDelay = FireInterval;
 }

@@ -22,10 +22,14 @@ public:
     ~World();
 
     void resize(int width, int height);
-    void update(InputState inputState, double elapsed);
+    void update(InputState inputState, float elapsed);
     void render() const;
 
 private:
+    void updatePlayer(InputState inputState, float elapsed);
+    void updateBullets(float elapsed);
+    void fire();
+
     std::unique_ptr<ShaderManager> m_shaderManager;
     std::unique_ptr<MaterialCache> m_materialCache;
     std::unique_ptr<Camera> m_camera;
@@ -39,7 +43,6 @@ private:
     std::unique_ptr<Entity> m_playerEntity;
     std::unique_ptr<Entity> m_explosionEntity;
     std::unique_ptr<Mesh> m_bulletsMesh;
-    double m_time = 0.0;
     enum class CameraMode {
         FirstPerson,
         ThirdPerson
@@ -49,4 +52,11 @@ private:
         glm::vec3 position;
     };
     std::vector<Explosion> m_explosions;
+    struct Bullet {
+        glm::vec3 position;
+        glm::vec3 velocity;
+        float lifetime;
+    };
+    std::vector<Bullet> m_bullets;
+    float m_fireDelay = 0.0f;
 };
