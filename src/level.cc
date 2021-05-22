@@ -94,20 +94,20 @@ void Level::load(const char *path, MaterialCache *materialCache)
     m_octree->initialize(faces);
 }
 
-void Level::render(Renderer *renderer, const glm::mat4 &worldMatrix) const
+void Level::render(Renderer *renderer) const
 {
 #if DRAW_RAW_LEVEL_MESHES
     for (const auto &m : m_meshes) {
-        renderer->render(m.mesh.get(), m.material, worldMatrix);
+        renderer->render(m.mesh.get(), m.material, glm::mat4(1));
     }
 #else
-    m_octree->render(renderer, worldMatrix);
+    m_octree->render(renderer, glm::mat4(1));
 #endif
 }
 
 std::optional<glm::vec3> Level::findCollision(const glm::vec3 &p0, const glm::vec3 &p1) const
 {
-#ifdef DRAW_RAW_LEVEL_MESHES
+#if DRAW_RAW_LEVEL_MESHES
     const auto ray = Ray { p0, p1 - p0 };
     std::optional<glm::vec3> collision;
     auto collisionT = std::numeric_limits<float>::max();

@@ -95,7 +95,7 @@ void World::render() const
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
     m_renderer->begin();
-    m_level->render(m_renderer.get(), glm::mat4(1));
+    m_level->render(m_renderer.get());
     if (m_cameraMode == CameraMode::ThirdPerson) {
         const auto t = glm::translate(glm::mat4(1), m_playerState.position);
         const auto r = glm::mat4(m_playerState.rotation);

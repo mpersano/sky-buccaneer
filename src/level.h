@@ -23,7 +23,7 @@ public:
     ~Level();
 
     void load(const char *path, MaterialCache *materialCache);
-    void render(Renderer *renderer, const glm::mat4 &worldMatrix) const;
+    void render(Renderer *renderer) const;
     std::optional<glm::vec3> findCollision(const glm::vec3 &p0, const glm::vec3 &p1) const;
 
 private:
