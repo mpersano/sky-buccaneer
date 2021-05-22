@@ -65,10 +65,6 @@ World::World()
     m_playerEntity->load("assets/meshes/player-ship.w3d", m_materialCache.get());
     m_explosionEntity->load("assets/meshes/fireball.w3d", m_materialCache.get());
 
-    std::generate_n(std::back_inserter(m_explosions), 20, []() -> Explosion {
-        return { glm::linearRand(glm::vec3(-10), glm::vec3(10)) };
-    });
-
     glClearColor(0, 0, 0, 0);
     glEnable(GL_CULL_FACE);
     glEnable(GL_DEPTH_TEST);
@@ -126,20 +122,47 @@ void World::render() const
 void World::update(InputState inputState, float elapsed)
 {
     updateBullets(elapsed);
+    updateExplosions(elapsed);
     updatePlayer(inputState, elapsed);
 }
 
 void World::updateBullets(float elapsed)
 {
+    const auto updateBullet = [this, elapsed](Bullet &bullet) {
+        bullet.lifetime -= elapsed;
+        if (bullet.lifetime < 0.0)
+            return false;
+        const auto d = glm::normalize(bullet.velocity);
+        constexpr auto BulletLength = 2.0f;
+        const auto p0 = bullet.position - 0.5f * BulletLength * d;
+        const auto p1 = bullet.position + 0.5f * BulletLength * d;
+        if (auto collisionPosition = m_level->findCollision(p0, p1)) {
+            spawnExplosion(*collisionPosition);
+            return false;
+        }
+        bullet.position += bullet.velocity;
+        return true;
+    };
     auto it = m_bullets.begin();
     while (it != m_bullets.end()) {
         auto &bullet = *it;
-        bullet.lifetime -= elapsed;
-        if (bullet.lifetime < 0.0) {
+        if (!updateBullet(*it))
             it = m_bullets.erase(it);
+        else
+            ++it;
+    }
+}
+
+void World::updateExplosions(float elapsed)
+{
+    auto it = m_explosions.begin();
+    while (it != m_explosions.end()) {
+        auto &explosion = *it;
+        explosion.lifetime -= elapsed;
+        if (explosion.lifetime < 0.0) {
+            it = m_explosions.erase(it);
             continue;
         }
-        bullet.position += bullet.velocity;
         ++it;
     }
 }
@@ -190,7 +213,7 @@ void World::updatePlayer(InputState inputState, float elapsed)
         movePlayer(offset);
     }
     if (testFlag(InputState::Fire)) {
-        fire();
+        fireBullet();
     }
     if (testFlag(InputState::ToggleView) && (m_prevInputState & InputState::ToggleView) == InputState::None) {
         m_cameraMode = m_cameraMode == CameraMode::FirstPerson ? CameraMode::ThirdPerson : CameraMode::FirstPerson;
@@ -198,7 +221,7 @@ void World::updatePlayer(InputState inputState, float elapsed)
     m_prevInputState = inputState;
 }
 
-void World::fire()
+void World::fireBullet()
 {
     if (m_fireDelay > 0.0f || m_bullets.size() >= MaxBullets)
         return;
@@ -216,4 +239,10 @@ void World::fire()
     m_bullets.push_back(bullet);
 
     m_fireDelay = FireInterval;
+}
+
+void World::spawnExplosion(const glm::vec3 &position)
+{
+    constexpr auto ExplosionDuration = 1.0;
+    m_explosions.push_back({ position, ExplosionDuration });
 }

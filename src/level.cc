@@ -11,6 +11,7 @@
 #include <glm/gtx/string_cast.hpp>
 
 #include <iostream>
+#include <limits>
 
 Level::Level()
     : m_octree(new Octree)
@@ -19,13 +20,13 @@ Level::Level()
 
 Level::~Level() = default;
 
-void Level::load(const char *filepath, MaterialCache *materialCache)
+void Level::load(const char *path, MaterialCache *materialCache)
 {
     std::vector<Face> faces;
 
-    DataStream ds(filepath);
+    DataStream ds(path);
     if (!ds) {
-        panic("failed to open %s\n", filepath);
+        panic("failed to open %s\n", path);
     }
 
     uint32_t meshCount;
@@ -70,6 +71,15 @@ void Level::load(const char *filepath, MaterialCache *materialCache)
                 indices.push_back(faceIndices[j]);
                 indices.push_back(faceIndices[j + 1]);
             }
+
+#if DRAW_RAW_LEVEL_MESHES
+            for (int j = 1; j < faceIndexCount - 1; ++j) {
+                const auto &v0 = vertices[faceIndices[0]];
+                const auto &v1 = vertices[faceIndices[j]];
+                const auto &v2 = vertices[faceIndices[j + 1]];
+                m_triangles.push_back({ v0.position, v1.position, v2.position });
+            }
+#endif
         }
 
         std::cout << "**** mesh: " << vertices.size() << ' ' << indices.size() << '\n';
@@ -93,4 +103,24 @@ void Level::render(Renderer *renderer, const glm::mat4 &worldMatrix) const
 #else
     m_octree->render(renderer, worldMatrix);
 #endif
+}
+
+std::optional<glm::vec3> Level::findCollision(const glm::vec3 &p0, const glm::vec3 &p1) const
+{
+#ifdef DRAW_RAW_LEVEL_MESHES
+    const auto ray = Ray { p0, p1 - p0 };
+    std::optional<glm::vec3> collision;
+    auto collisionT = std::numeric_limits<float>::max();
+    for (const auto &triangle : m_triangles) {
+        if (auto ot = rayTriangleIntersection(ray, triangle)) {
+            const auto t = *ot;
+            if (t < 1.0f && (!collision || t < collisionT)) {
+                collisionT = t;
+                collision = p0 + t * (p1 - p0);
+            }
+        }
+    }
+    return collision;
+#endif
+    return {};
 }
