@@ -22,13 +22,49 @@ BoundingBox &BoundingBox::operator|=(const glm::vec3 &p)
     return *this;
 }
 
+glm::vec3 LineSegment::pointAt(float t) const
+{
+    return (1.0f - t) * from + t * to;
+}
+
+std::optional<float> LineSegment::intersection(const Triangle &triangle) const
+{
+    return triangle.intersection(*this);
+}
+
+Ray LineSegment::ray() const
+{
+    return { from, to - from };
+}
+
+glm::vec3 Ray::pointAt(float t) const
+{
+    return origin + t * direction;
+}
+
+std::optional<float> Ray::intersection(const Triangle &triangle) const
+{
+    return triangle.intersection(*this);
+}
+
+std::optional<float> Triangle::intersection(const LineSegment &segment) const
+{
+    auto ot = intersection(segment.ray());
+    if (!ot)
+        return {};
+    const auto t = *ot;
+    if (t > 1.0f)
+        return {};
+    return t;
+}
+
 // Moller-Trumbore
-std::optional<float> rayTriangleIntersection(const Ray &ray, const Triangle &triangle)
+std::optional<float> Triangle::intersection(const Ray &ray) const
 {
     constexpr const auto Epsilon = 1e-6;
 
-    const auto e1 = triangle.v1 - triangle.v0;
-    const auto e2 = triangle.v2 - triangle.v0;
+    const auto e1 = v1 - v0;
+    const auto e2 = v2 - v0;
 
     const auto h = glm::cross(ray.direction, e2);
     const auto a = glm::dot(e1, h);
@@ -36,7 +72,7 @@ std::optional<float> rayTriangleIntersection(const Ray &ray, const Triangle &tri
         return {}; // parallel to triangle
 
     const auto f = 1.0f / a;
-    const auto s = ray.origin - triangle.v0;
+    const auto s = ray.origin - v0;
     const auto u = f * glm::dot(s, h);
     if (u < 0.0f || u > 1.0f)
         return {};
@@ -47,7 +83,7 @@ std::optional<float> rayTriangleIntersection(const Ray &ray, const Triangle &tri
         return {};
 
     const auto t = f * glm::dot(e2, q);
-    if (t < 0.0f || t > 1.0f)
+    if (t < 0.0f)
         return {};
 
     return t;

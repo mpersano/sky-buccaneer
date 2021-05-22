@@ -13,13 +13,29 @@ struct BoundingBox {
     BoundingBox &operator|=(const glm::vec3 &p);
 };
 
+struct Triangle;
+struct Ray;
+
+struct LineSegment {
+    glm::vec3 from;
+    glm::vec3 to;
+
+    Ray ray() const;
+    glm::vec3 pointAt(float t) const;
+    std::optional<float> intersection(const Triangle &triangle) const;
+};
+
 struct Ray {
     glm::vec3 origin;
     glm::vec3 direction;
+
+    glm::vec3 pointAt(float t) const;
+    std::optional<float> intersection(const Triangle &triangle) const;
 };
 
 struct Triangle {
     glm::vec3 v0, v1, v2;
-};
 
-std::optional<float> rayTriangleIntersection(const Ray &ray, const Triangle &triangle);
+    std::optional<float> intersection(const LineSegment &segment) const;
+    std::optional<float> intersection(const Ray &ray) const;
+};

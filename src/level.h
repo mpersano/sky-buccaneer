@@ -5,7 +5,6 @@
 #include <glm/glm.hpp>
 
 #include <memory>
-#include <optional>
 #include <vector>
 
 class Mesh;
@@ -24,7 +23,7 @@ public:
 
     void load(const char *path, MaterialCache *materialCache);
     void render(Renderer *renderer) const;
-    std::optional<glm::vec3> findCollision(const glm::vec3 &p0, const glm::vec3 &p1) const;
+    std::optional<glm::vec3> findCollision(const LineSegment &segment) const;
 
 private:
 #if DRAW_RAW_LEVEL_MESHES

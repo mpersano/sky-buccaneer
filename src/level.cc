@@ -105,18 +105,17 @@ void Level::render(Renderer *renderer) const
 #endif
 }
 
-std::optional<glm::vec3> Level::findCollision(const glm::vec3 &p0, const glm::vec3 &p1) const
+std::optional<glm::vec3> Level::findCollision(const LineSegment &segment) const
 {
 #if DRAW_RAW_LEVEL_MESHES
-    const auto ray = Ray { p0, p1 - p0 };
     std::optional<glm::vec3> collision;
     auto collisionT = std::numeric_limits<float>::max();
     for (const auto &triangle : m_triangles) {
-        if (auto ot = rayTriangleIntersection(ray, triangle)) {
+        if (const auto ot = segment.intersection(triangle)) {
             const auto t = *ot;
             if (t < collisionT) {
                 collisionT = t;
-                collision = p0 + t * (p1 - p0);
+                collision = segment.pointAt(t);
             }
         }
     }

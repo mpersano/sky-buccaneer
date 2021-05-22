@@ -136,7 +136,7 @@ void World::updateBullets(float elapsed)
         constexpr auto BulletLength = 2.0f;
         const auto p0 = bullet.position - 0.5f * BulletLength * d;
         const auto p1 = bullet.position + 0.5f * BulletLength * d;
-        if (auto collisionPosition = m_level->findCollision(p0, p1)) {
+        if (auto collisionPosition = m_level->findCollision(LineSegment { p0, p1 })) {
             spawnExplosion(*collisionPosition);
             return false;
         }
