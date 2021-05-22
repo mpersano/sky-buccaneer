@@ -21,3 +21,34 @@ BoundingBox &BoundingBox::operator|=(const glm::vec3 &p)
     max = glm::max(p, max);
     return *this;
 }
+
+// Moller-Trumbore
+std::optional<float> rayTriangleIntersection(const Ray &ray, const Triangle &triangle)
+{
+    constexpr const auto Epsilon = 1e-6;
+
+    const auto e1 = triangle.v1 - triangle.v0;
+    const auto e2 = triangle.v2 - triangle.v0;
+
+    const auto h = glm::cross(ray.direction, e2);
+    const auto a = glm::dot(e1, h);
+    if (std::fabs(a) < Epsilon)
+        return {}; // parallel to triangle
+
+    const auto f = 1.0f / a;
+    const auto s = ray.origin - triangle.v0;
+    const auto u = f * glm::dot(s, h);
+    if (u < 0.0f || u > 1.0f)
+        return {};
+
+    const auto q = glm::cross(s, e1);
+    const auto v = f * glm::dot(ray.direction, q);
+    if (v < 0.0f || u + v > 1.0f)
+        return {};
+
+    const auto t = f * glm::dot(e2, q);
+    if (t < 0.0f || t > 1.0f)
+        return {};
+
+    return t;
+}

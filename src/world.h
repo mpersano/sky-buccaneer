@@ -28,7 +28,9 @@ public:
 private:
     void updatePlayer(InputState inputState, float elapsed);
     void updateBullets(float elapsed);
-    void fire();
+    void updateExplosions(float elapsed);
+    void fireBullet();
+    void spawnExplosion(const glm::vec3 &center);
 
     std::unique_ptr<ShaderManager> m_shaderManager;
     std::unique_ptr<MaterialCache> m_materialCache;
@@ -50,6 +52,7 @@ private:
     InputState m_prevInputState;
     struct Explosion {
         glm::vec3 position;
+        float lifetime;
     };
     std::vector<Explosion> m_explosions;
     struct Bullet {
