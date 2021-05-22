@@ -262,25 +262,25 @@ std::unique_ptr<Node> initializeInternalNode(const BoundingBox &box, const std::
 
         if ((i & 1) == 0) {
             childBox.min.x = box.min.x;
-            childBox.max.x = 0.5f * (box.min.x + box.max.x);
+            childBox.max.x = center.x;
         } else {
-            childBox.min.x = 0.5f * (box.min.x + box.max.x);
+            childBox.min.x = center.x;
             childBox.max.x = box.max.x;
         }
 
         if ((i & 2) == 0) {
             childBox.min.y = box.min.y;
-            childBox.max.y = 0.5f * (box.min.y + box.max.y);
+            childBox.max.y = center.y;
         } else {
-            childBox.min.y = 0.5f * (box.min.y + box.max.y);
+            childBox.min.y = center.y;
             childBox.max.y = box.max.y;
         }
 
         if ((i & 4) == 0) {
             childBox.min.z = box.min.z;
-            childBox.max.z = 0.5f * (box.min.z + box.max.z);
+            childBox.max.z = center.z;
         } else {
-            childBox.min.z = 0.5f * (box.min.z + box.max.z);
+            childBox.min.z = center.z;
             childBox.max.z = box.max.z;
         }
 
