@@ -9,10 +9,32 @@
 
 #include <algorithm>
 #include <iostream>
+#include <limits>
 #include <set>
 
 #define DRAW_NODE_BOXES 1
-#define DRAW_POLYGON_EDGES 1
+#define DRAW_POLYGON_EDGES 0
+#define DEBUG_INTERSECTIONS 1
+
+namespace {
+const bool fuzzyCompare(float a, float b)
+{
+    return (std::abs(a - b) * 10000.f <= std::min(std::abs(a), std::abs(b)));
+}
+
+const bool fuzzyCompare(const glm::vec3 &a, const glm::vec3 &b)
+{
+    return fuzzyCompare(a.x, b.x) && fuzzyCompare(a.y, b.y) && fuzzyCompare(a.z, b.z);
+}
+
+const auto assertCompare(const glm::vec3 &a, const glm::vec3 &b)
+{
+    if (!fuzzyCompare(a, b)) {
+        std::cerr << "expected " << glm::to_string(a) << " == " << glm::to_string(b) << '\n';
+        std::abort();
+    }
+}
+} // namespace
 
 namespace OctreePrivate {
 
@@ -34,19 +56,28 @@ struct Node {
     std::unique_ptr<Mesh> boxMesh;
 #endif
     virtual void render(Renderer *renderer, const glm::mat4 &worldMatrix) const = 0;
+
+    void findCollision(const Ray &ray, const glm::vec3 &tMin, const glm::vec3 &tMax, std::optional<float> &collisionT) const;
+    virtual void findLeafCollision(const Ray &ray, const glm::vec3 &tMin, const glm::vec3 &tMax, std::optional<float> &collisionT) const = 0;
+#if DEBUG_INTERSECTIONS
+    mutable bool m_intersected = false;
+#endif
 };
 
 struct LeafNode : Node {
     void render(Renderer *renderer, const glm::mat4 &worldMatrix) const override;
+    void findLeafCollision(const Ray &ray, const glm::vec3 &tMin, const glm::vec3 &tMax, std::optional<float> &collisionT) const override;
     struct MeshMaterial {
         std::unique_ptr<Mesh> mesh;
         const Material *material;
     };
     std::vector<MeshMaterial> meshes;
+    std::vector<Triangle> triangles;
 };
 
 struct InternalNode : Node {
     void render(Renderer *renderer, const glm::mat4 &worldMatrix) const override;
+    void findLeafCollision(const Ray &ray, const glm::vec3 &tMin, const glm::vec3 &tMax, std::optional<float> &collisionT) const override;
     std::array<std::unique_ptr<Node>, 8> children;
 };
 
@@ -149,6 +180,12 @@ std::unique_ptr<Node> initializeLeafNode(const BoundingBox &box, const std::vect
 #endif
         for (auto &face : faces) {
             const auto &vertices = face.vertices;
+            for (int i = 1; i < vertices.size() - 1; ++i) {
+                const auto &v0 = vertices[0];
+                const auto &v1 = vertices[i];
+                const auto &v2 = vertices[i + 1];
+                node->triangles.push_back({ v0.position, v1.position, v2.position });
+            }
             std::vector<unsigned> faceIndices;
             faceIndices.reserve(vertices.size());
             std::transform(vertices.begin(), vertices.end(), std::back_inserter(faceIndices),
@@ -263,7 +300,7 @@ std::unique_ptr<Node> initializeNode(const BoundingBox &box, const std::vector<F
         }
     }
 
-    constexpr auto MaxFacesPerLeafNode = 200;
+    constexpr auto MaxFacesPerLeafNode = 20;
 
     std::unique_ptr<Node> node;
     if (faces.size() <= MaxFacesPerLeafNode) {
@@ -301,10 +338,45 @@ std::unique_ptr<Node> initializeNode(const BoundingBox &box, const std::vector<F
     return node;
 }
 
+void Node::findCollision(const Ray &ray, const glm::vec3 &tMin, const glm::vec3 &tMax, std::optional<float> &collisionT) const
+{
+#if DEBUG_INTERSECTIONS
+    assertCompare(tMin, (boundingBox.min - ray.origin) / ray.direction);
+    assertCompare(tMax, (boundingBox.max - ray.origin) / ray.direction);
+#endif
+
+    const auto tClose = glm::min(tMin, tMax);
+    const auto tFar = glm::max(tMin, tMax);
+
+    const auto intersects = std::max(tClose.x, std::max(tClose.y, tClose.z)) < std::min(tFar.x, std::min(tFar.y, tFar.z));
+#if DEBUG_INTERSECTIONS
+    m_intersected = intersects;
+#else
+    if (!intersects)
+        return;
+#endif
+
+    findLeafCollision(ray, tMin, tMax, collisionT);
+}
+
+void LeafNode::findLeafCollision(const Ray &ray, const glm::vec3 &tMin, const glm::vec3 &tMax, std::optional<float> &collisionT) const
+{
+    for (const auto &triangle : triangles) {
+        if (const auto ot = ray.intersection(triangle)) {
+            const auto t = *ot;
+            if (!collisionT || t < *collisionT)
+                collisionT = t;
+        }
+    }
+}
+
 void LeafNode::render(Renderer *renderer, const glm::mat4 &worldMatrix) const
 {
 #if DRAW_NODE_BOXES
-    renderer->render(boxMesh.get(), debugMaterial(), worldMatrix);
+#if DEBUG_INTERSECTIONS
+    if (m_intersected)
+#endif
+        renderer->render(boxMesh.get(), debugMaterial(), worldMatrix);
 #endif
     for (auto &m : meshes) {
         renderer->render(m.mesh.get(), m.material, worldMatrix);
@@ -314,12 +386,56 @@ void LeafNode::render(Renderer *renderer, const glm::mat4 &worldMatrix) const
 void InternalNode::render(Renderer *renderer, const glm::mat4 &worldMatrix) const
 {
 #if DRAW_NODE_BOXES
-    renderer->render(boxMesh.get(), debugMaterial(), worldMatrix);
+#if DEBUG_INTERSECTIONS
+    if (m_intersected)
+#endif
+        renderer->render(boxMesh.get(), debugMaterial(), worldMatrix);
 #endif
     for (auto &child : children) {
         if (child) {
             child->render(renderer, worldMatrix);
         }
+    }
+}
+
+void InternalNode::findLeafCollision(const Ray &ray, const glm::vec3 &tMin, const glm::vec3 &tMax, std::optional<float> &collisionT) const
+{
+    const auto tMid = 0.5f * (tMin + tMax);
+
+    for (int i = 0; i < 8; ++i) {
+        auto &child = children[i];
+        if (!child)
+            continue;
+
+        glm::vec3 childTMin, childTMax;
+
+        if ((i & 1) == 0) {
+            childTMin.x = tMin.x;
+            childTMax.x = tMid.x;
+        } else {
+            childTMin.x = tMid.x;
+            childTMax.x = tMax.x;
+        }
+
+        float childTyMin, childTyMax;
+        if ((i & 2) == 0) {
+            childTMin.y = tMin.y;
+            childTMax.y = tMid.y;
+        } else {
+            childTMin.y = tMid.y;
+            childTMax.y = tMax.y;
+        }
+
+        float childTzMin, childTzMax;
+        if ((i & 4) == 0) {
+            childTMin.z = tMin.z;
+            childTMax.z = tMid.z;
+        } else {
+            childTMin.z = tMid.z;
+            childTMax.z = tMax.z;
+        }
+
+        child->findCollision(ray, childTMin, childTMax, collisionT);
     }
 }
 
@@ -344,4 +460,27 @@ void Octree::render(Renderer *renderer, const glm::mat4 &worldMatrix) const
     if (m_root) {
         m_root->render(renderer, worldMatrix);
     }
+}
+
+std::optional<glm::vec3> Octree::findCollision(const LineSegment &segment) const
+{
+    if (!m_root)
+        return {};
+
+    const auto ray = segment.ray();
+
+    const auto &bb = m_root->boundingBox;
+
+    // TODO handle ray parallel to bounding box faces
+    const auto tMin = (bb.min - ray.origin) / ray.direction;
+    const auto tMax = (bb.max - ray.origin) / ray.direction;
+
+    std::optional<float> collisionT;
+    m_root->findCollision(ray, tMin, tMax, collisionT);
+    if (!collisionT)
+        return {};
+    const auto t = *collisionT;
+    if (t < 0.0f || t > 1.0f)
+        return {};
+    return ray.pointAt(t);
 }

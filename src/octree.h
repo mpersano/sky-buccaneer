@@ -1,5 +1,7 @@
 #pragma once
 
+#include "geometryutils.h"
+
 #include <glm/glm.hpp>
 
 #include <memory>
@@ -31,6 +33,7 @@ public:
     void initialize(const std::vector<Face> &faces);
 
     void render(Renderer *renderer, const glm::mat4 &worldMatrix) const;
+    std::optional<glm::vec3> findCollision(const LineSegment &segment) const;
 
 private:
     std::unique_ptr<OctreePrivate::Node> m_root;

@@ -120,6 +120,7 @@ std::optional<glm::vec3> Level::findCollision(const LineSegment &segment) const
         }
     }
     return collision;
+#else
+    return m_octree->findCollision(segment);
 #endif
-    return {};
 }

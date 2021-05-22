@@ -13,7 +13,7 @@ class Renderer;
 class MaterialCache;
 class Octree;
 
-#define DRAW_RAW_LEVEL_MESHES 1
+#define DRAW_RAW_LEVEL_MESHES 0
 
 class Level
 {
