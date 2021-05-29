@@ -22,6 +22,7 @@ namespace {
 struct BulletState {
     glm::vec3 position;
     glm::vec3 velocity;
+    glm::vec2 size;
 };
 
 constexpr const auto MaxBullets = 200;
@@ -33,6 +34,7 @@ std::unique_ptr<Mesh> makeBulletMesh()
     static const std::vector<Mesh::VertexAttribute> attributes = {
         { 3, GL_FLOAT, offsetof(BulletState, position) },
         { 3, GL_FLOAT, offsetof(BulletState, velocity) },
+        { 2, GL_FLOAT, offsetof(BulletState, size) }
     };
 
     mesh->setVertexCount(MaxBullets);
@@ -111,7 +113,7 @@ void World::render() const
     if (!m_bullets.empty()) {
         std::vector<BulletState> bulletData;
         std::transform(m_bullets.begin(), m_bullets.end(), std::back_inserter(bulletData), [](const Bullet &bullet) -> BulletState {
-            return { bullet.position, bullet.velocity };
+            return { bullet.position, bullet.velocity, glm::vec2(.1, 2) };
         });
         m_bulletsMesh->setVertexCount(m_bullets.size());
         m_bulletsMesh->setVertexData(bulletData.data());

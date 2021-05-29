@@ -10,13 +10,13 @@ uniform mat4 projectionMatrix;
 in WorldVertex {
     vec3 position;
     vec3 velocity;
+    vec2 size;
 } gs_in[];
-
-const vec2 SpriteSize = vec2(0.5, 2);
 
 void main(void)
 {
     vec3 worldPosition = gs_in[0].position;
+    vec2 size = gs_in[0].size;
 
     vec3 velVec = normalize(gs_in[0].velocity);
     vec3 eyeVec = eyePosition - worldPosition;
@@ -25,10 +25,10 @@ void main(void)
     vec3 sideVec = normalize(cross(projectedEyeVec, velVec));
 
     vec3 spriteVerts[4];
-    spriteVerts[0] = worldPosition - sideVec * 0.5 * SpriteSize.x + velVec * 0.5 * SpriteSize.y;
-    spriteVerts[1] = spriteVerts[0] + sideVec * SpriteSize.x;
-    spriteVerts[2] = spriteVerts[0] + velVec * SpriteSize.y;
-    spriteVerts[3] = spriteVerts[1] + velVec * SpriteSize.y;
+    spriteVerts[0] = worldPosition - sideVec * 0.5 * size.x + velVec * 0.5 * size.y;
+    spriteVerts[1] = spriteVerts[0] + sideVec * size.x;
+    spriteVerts[2] = spriteVerts[0] + velVec * size.y;
+    spriteVerts[3] = spriteVerts[1] + velVec * size.y;
 
     mat4 viewProjection = projectionMatrix * viewMatrix;
 
