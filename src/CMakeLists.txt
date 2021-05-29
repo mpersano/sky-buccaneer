@@ -22,6 +22,8 @@ set(GAME_SOURCES
     level.cc
     octree.cc
     geometryutils.cc
+    gameobject.cc
+    player.cc
 )
 
 add_executable(game ${GAME_SOURCES})

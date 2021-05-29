@@ -5,6 +5,7 @@
 #include "level.h"
 #include "materialcache.h"
 #include "mesh.h"
+#include "player.h"
 #include "renderer.h"
 #include "shadermanager.h"
 
@@ -54,15 +55,11 @@ World::World()
     , m_camera(new Camera)
     , m_renderer(new Renderer(m_shaderManager.get(), m_camera.get()))
     , m_level(new Level)
-    , m_playerEntity(new Entity)
+    , m_player(new Player(this))
     , m_explosionEntity(new Entity)
     , m_bulletsMesh(makeBulletMesh())
 {
-    m_playerState.position = glm::vec3(0, 0, 0);
-    m_playerState.rotation = glm::mat3(1);
-
     m_level->load("assets/meshes/level.z3d", m_materialCache.get());
-    m_playerEntity->load("assets/meshes/player-ship.w3d", m_materialCache.get());
     m_explosionEntity->load("assets/meshes/fireball.w3d", m_materialCache.get());
 
     glClearColor(0, 0, 0, 0);
@@ -80,15 +77,17 @@ void World::resize(int width, int height)
 
 void World::render() const
 {
+    const auto playerPosition = m_player->position();
+    const auto playerRotation = m_player->rotation();
     if (m_cameraMode == CameraMode::FirstPerson) {
-        const auto playerDir = m_playerState.rotation[2];
-        const auto playerUp = m_playerState.rotation[1];
-        m_camera->setEye(m_playerState.position);
-        m_camera->setCenter(m_playerState.position + playerDir);
+        const auto playerDir = playerRotation[2];
+        const auto playerUp = playerRotation[1];
+        m_camera->setEye(playerPosition);
+        m_camera->setCenter(playerPosition + playerDir);
         m_camera->setUp(playerUp);
     } else {
         m_camera->setEye(glm::vec3(0, 0, 0));
-        m_camera->setCenter(m_playerState.position);
+        m_camera->setCenter(playerPosition);
         m_camera->setUp(glm::vec3(0, 1, 0));
     }
 
@@ -97,10 +96,7 @@ void World::render() const
     m_renderer->begin();
     m_level->render(m_renderer.get());
     if (m_cameraMode == CameraMode::ThirdPerson) {
-        const auto t = glm::translate(glm::mat4(1), m_playerState.position);
-        const auto r = glm::mat4(m_playerState.rotation);
-        const auto playerWorldMatrix = t * r;
-        m_playerEntity->render(m_renderer.get(), playerWorldMatrix, 0);
+        m_player->render(m_renderer.get());
     }
     for (const auto &explosion : m_explosions) {
         const auto t = glm::translate(glm::mat4(1), explosion.position);
@@ -121,9 +117,18 @@ void World::render() const
 
 void World::update(InputState inputState, float elapsed)
 {
+    const auto prevInputState = m_inputState;
+    m_inputState = inputState;
+
+    const auto toggleViewPressed = [](InputState inputState) {
+        return (inputState & InputState::ToggleView) != InputState::None;
+    };
+    if (toggleViewPressed(inputState) && !toggleViewPressed(prevInputState))
+        m_cameraMode = m_cameraMode == CameraMode::FirstPerson ? CameraMode::ThirdPerson : CameraMode::FirstPerson;
+
     updateBullets(elapsed);
     updateExplosions(elapsed);
-    updatePlayer(inputState, elapsed);
+    m_player->update(elapsed);
 }
 
 void World::updateBullets(float elapsed)
@@ -167,78 +172,11 @@ void World::updateExplosions(float elapsed)
     }
 }
 
-void World::updatePlayer(InputState inputState, float elapsed)
+void World::spawnBullet(const glm::vec3 &position, const glm::vec3 &velocity, float duration)
 {
-    m_fireDelay = std::max(m_fireDelay - elapsed, 0.0f);
-
-    const auto rotatePlayer = [this](float angle, const glm::vec3 &axis) {
-        const auto r = glm::mat3(glm::rotate(glm::mat4(1), angle, axis));
-        m_playerState.rotation *= r;
-    };
-
-    const auto movePlayer = [this](float offset) {
-        const auto d = m_playerState.rotation[2];
-        m_playerState.position += d * offset;
-    };
-
-    const auto testFlag = [inputState](InputState flag) {
-        return (inputState & flag) != InputState::None;
-    };
-
-    constexpr auto Speed = 5.0f;
-    constexpr auto AngularVelocity = 1.5f;
-
-    if (testFlag(InputState::Left)) {
-        const auto angle = elapsed * AngularVelocity;
-        rotatePlayer(angle, glm::vec3(0, 1, 0));
-    }
-    if (testFlag(InputState::Right)) {
-        const auto angle = elapsed * -AngularVelocity;
-        rotatePlayer(angle, glm::vec3(0, 1, 0));
-    }
-    if (testFlag(InputState::Up)) {
-        const auto angle = elapsed * AngularVelocity;
-        rotatePlayer(angle, glm::vec3(1, 0, 0));
-    }
-    if (testFlag(InputState::Down)) {
-        const auto angle = elapsed * -AngularVelocity;
-        rotatePlayer(angle, glm::vec3(1, 0, 0));
-    }
-    if (testFlag(InputState::Forward)) {
-        const auto offset = elapsed * Speed;
-        movePlayer(offset);
-    }
-    if (testFlag(InputState::Reverse)) {
-        const auto offset = elapsed * -Speed;
-        movePlayer(offset);
-    }
-    if (testFlag(InputState::Fire)) {
-        fireBullet();
-    }
-    if (testFlag(InputState::ToggleView) && (m_prevInputState & InputState::ToggleView) == InputState::None) {
-        m_cameraMode = m_cameraMode == CameraMode::FirstPerson ? CameraMode::ThirdPerson : CameraMode::FirstPerson;
-    }
-    m_prevInputState = inputState;
-}
-
-void World::fireBullet()
-{
-    if (m_fireDelay > 0.0f || m_bullets.size() >= MaxBullets)
+    if (m_bullets.size() >= MaxBullets)
         return;
-
-    constexpr auto BulletSpeed = 1.5f;
-    constexpr auto FireInterval = 0.2f;
-    constexpr auto BulletDuration = 5.0;
-
-    const auto offset = glm::vec3(0.5, -0.5, -2.5);
-
-    Bullet bullet;
-    bullet.position = m_playerState.position + m_playerState.rotation * offset;
-    bullet.velocity = BulletSpeed * m_playerState.rotation[2];
-    bullet.lifetime = BulletDuration;
-    m_bullets.push_back(bullet);
-
-    m_fireDelay = FireInterval;
+    m_bullets.push_back({ position, velocity, duration });
 }
 
 void World::spawnExplosion(const glm::vec3 &position)
