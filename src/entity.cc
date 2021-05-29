@@ -15,7 +15,7 @@
 
 namespace {
 
-std::unique_ptr<Mesh> readMesh(DataStream &ds)
+auto readMesh(DataStream &ds)
 {
     std::vector<MeshVertex> vertices;
     ds >> vertices;
@@ -31,7 +31,17 @@ std::unique_ptr<Mesh> readMesh(DataStream &ds)
         indices.push_back(index);
     }
 
-    return makeMesh(GL_TRIANGLES, vertices, indices);
+    auto mesh = makeMesh(GL_TRIANGLES, vertices, indices);
+
+    std::vector<Triangle> triangles;
+    for (int i = 0; i < triangleCount; ++i) {
+        const auto &v0 = vertices[indices[i * 3]];
+        const auto &v1 = vertices[indices[i * 3 + 1]];
+        const auto &v2 = vertices[indices[i * 3 + 2]];
+        triangles.push_back({ v0.position, v1.position, v2.position });
+    }
+
+    return std::tuple(triangles, std::move(mesh));
 }
 
 template<typename SampleT>
@@ -146,9 +156,10 @@ void Entity::load(const char *filepath, MaterialCache *materialCache)
             for (int i = 0; i < meshCount; ++i) {
                 MaterialKey materialKey;
                 ds >> materialKey;
-                auto mesh = readMesh(ds);
+                auto [triangles, mesh] = readMesh(ds);
                 const auto *material = materialCache->cachedMaterial(materialKey);
                 node->meshes.push_back({ std::move(mesh), material });
+                node->collisionMesh.addTriangles(triangles);
             }
         }
     }
@@ -165,6 +176,21 @@ void Entity::render(Renderer *renderer, const glm::mat4 &worldMatrix, float fram
     for (const auto *node : m_rootNodes) {
         node->render(renderer, worldMatrix, frame);
     }
+}
+
+std::optional<glm::vec3> Entity::findCollision(const LineSegment &segment, const glm::mat4 &worldMatrix, float frame) const
+{
+    std::optional<float> collisionT;
+    for (const auto *node : m_rootNodes) {
+        if (const auto ot = node->intersection(segment, worldMatrix, frame)) {
+            if (const auto t = *ot; !collisionT || t < collisionT) {
+                collisionT = t;
+            }
+        }
+    }
+    if (!collisionT)
+        return {};
+    return segment.pointAt(*collisionT);
 }
 
 bool Entity::setActiveAction(std::string_view nodeName, std::string_view actionName)
@@ -204,7 +230,7 @@ auto sampleAt(const ChannelT &channel, float frame)
     }
 }
 
-void Entity::Node::render(Renderer *renderer, const glm::mat4 &parentWorldMatrix, float frame) const
+glm::mat4 Entity::Node::worldMatrixAt(const glm::mat4 &parentWorldMatrix, float frame) const
 {
     auto [translation, rotation, scale] = transform;
     if (activeAction) {
@@ -219,11 +245,28 @@ void Entity::Node::render(Renderer *renderer, const glm::mat4 &parentWorldMatrix
         }
     }
     const auto localMatrix = composeTransformMatrix(translation, rotation, scale);
-    const auto worldMatrix = parentWorldMatrix * localMatrix;
+    return parentWorldMatrix * localMatrix;
+}
+
+void Entity::Node::render(Renderer *renderer, const glm::mat4 &parentWorldMatrix, float frame) const
+{
+    const auto worldMatrix = worldMatrixAt(parentWorldMatrix, frame);
     for (const auto &m : meshes) {
         renderer->render(m.mesh.get(), m.material, worldMatrix);
     }
     for (const auto *child : children) {
         child->render(renderer, worldMatrix, frame);
     }
+}
+
+std::optional<float> Entity::Node::intersection(const LineSegment &segment, const glm::mat4 &parentWorldMatrix, float frame) const
+{
+    const auto worldMatrix = worldMatrixAt(parentWorldMatrix, frame);
+    const auto invWorldMatrix = glm::inverse(worldMatrix);
+    const auto mapToLocal = [&invWorldMatrix](const glm::vec3 &v) {
+        const auto p = invWorldMatrix * glm::vec4(v, 1.0f);
+        return glm::vec3(p) / p.w;
+    };
+    const auto localLineSegment = LineSegment { mapToLocal(segment.from), mapToLocal(segment.to) };
+    return collisionMesh.intersection(localLineSegment);
 }

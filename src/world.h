@@ -14,6 +14,7 @@ class Entity;
 class Mesh;
 class Level;
 class Camera;
+class Foe;
 class Player;
 
 class World
@@ -42,6 +43,7 @@ private:
     std::unique_ptr<Camera> m_camera;
     std::unique_ptr<Renderer> m_renderer;
     std::unique_ptr<Player> m_player;
+    std::unique_ptr<Foe> m_foe;
     std::unique_ptr<Level> m_level;
     std::unique_ptr<Entity> m_explosionEntity;
     std::unique_ptr<Mesh> m_bulletsMesh;

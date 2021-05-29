@@ -1,5 +1,7 @@
 #pragma once
 
+#include "geometryutils.h"
+
 #include <glm/glm.hpp>
 
 #include <memory>
@@ -15,19 +17,23 @@ public:
     explicit GameObject(World *world, const char *entityPath);
     virtual ~GameObject();
 
+    void setPosition(const glm::vec3 &position);
     glm::vec3 position() const { return m_position; }
+
+    void setRotation(const glm::mat3 &rotation);
     glm::mat3 rotation() const { return m_rotation; }
+
     glm::vec3 direction() const { return m_rotation[2]; }
+
     glm::mat4 transformMatrix() const { return m_transformMatrix; }
 
     void render(Renderer *renderer) const;
 
+    std::optional<glm::vec3> findCollision(const LineSegment &segment) const;
+
     virtual void update(float elapsed) = 0;
 
 protected:
-    void setPosition(const glm::vec3 &position);
-    void setRotation(const glm::mat3 &rotation);
-
     World *m_world;
 
 private:

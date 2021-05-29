@@ -2,6 +2,7 @@
 
 #include "camera.h"
 #include "entity.h"
+#include "foe.h"
 #include "level.h"
 #include "materialcache.h"
 #include "mesh.h"
@@ -56,11 +57,15 @@ World::World()
     , m_renderer(new Renderer(m_shaderManager.get(), m_camera.get()))
     , m_level(new Level)
     , m_player(new Player(this))
+    , m_foe(new Foe(this))
     , m_explosionEntity(new Entity)
     , m_bulletsMesh(makeBulletMesh())
 {
     m_level->load("assets/meshes/level.z3d", m_materialCache.get());
     m_explosionEntity->load("assets/meshes/fireball.w3d", m_materialCache.get());
+
+    m_foe->setPosition(glm::vec3(8.0, 0.0, 0.0));
+    m_foe->setRotation(glm::mat3(glm::rotate(glm::mat4(1), .5f, glm::normalize(glm::vec3(1.0f)))));
 
     glClearColor(0, 0, 0, 0);
     glEnable(GL_CULL_FACE);
@@ -112,6 +117,7 @@ void World::render() const
         m_bulletsMesh->setVertexData(bulletData.data());
         m_renderer->render(m_bulletsMesh.get(), bulletMaterial(), glm::mat4(1));
     }
+    m_foe->render(m_renderer.get());
     m_renderer->end();
 }
 
@@ -141,7 +147,13 @@ void World::updateBullets(float elapsed)
         constexpr auto BulletLength = 2.0f;
         const auto p0 = bullet.position - 0.5f * BulletLength * d;
         const auto p1 = bullet.position + 0.5f * BulletLength * d;
-        if (auto collisionPosition = m_level->findCollision(LineSegment { p0, p1 })) {
+        const auto segment = LineSegment { p0, p1 };
+        const auto collisionPosition = [this, &segment] {
+            if (auto position = m_level->findCollision(segment))
+                return position;
+            return m_foe->findCollision(segment);
+        }();
+        if (collisionPosition) {
             spawnExplosion(*collisionPosition);
             return false;
         }

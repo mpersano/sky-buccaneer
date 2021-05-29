@@ -38,3 +38,8 @@ void GameObject::render(Renderer *renderer) const
 {
     m_entity->render(renderer, m_transformMatrix, 0);
 }
+
+std::optional<glm::vec3> GameObject::findCollision(const LineSegment &segment) const
+{
+    return m_entity->findCollision(segment, m_transformMatrix, 0);
+}

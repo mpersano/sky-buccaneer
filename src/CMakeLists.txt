@@ -24,6 +24,8 @@ set(GAME_SOURCES
     geometryutils.cc
     gameobject.cc
     player.cc
+    foe.cc
+    collisionmesh.cc
 )
 
 add_executable(game ${GAME_SOURCES})
