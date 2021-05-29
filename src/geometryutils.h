@@ -4,17 +4,9 @@
 
 #include <optional>
 
-struct BoundingBox {
-    glm::vec3 min = glm::vec3(std::numeric_limits<float>::max());
-    glm::vec3 max = glm::vec3(std::numeric_limits<float>::min());
-
-    bool contains(const glm::vec3 &p) const;
-    BoundingBox operator|(const glm::vec3 &p) const;
-    BoundingBox &operator|=(const glm::vec3 &p);
-};
-
 struct Triangle;
 struct Ray;
+struct BoundingBox;
 
 struct LineSegment {
     glm::vec3 from;
@@ -23,6 +15,7 @@ struct LineSegment {
     Ray ray() const;
     glm::vec3 pointAt(float t) const;
     std::optional<float> intersection(const Triangle &triangle) const;
+    bool intersects(const BoundingBox &box) const;
 };
 
 struct Ray {
@@ -31,6 +24,19 @@ struct Ray {
 
     glm::vec3 pointAt(float t) const;
     std::optional<float> intersection(const Triangle &triangle) const;
+    bool intersects(const BoundingBox &box) const;
+};
+
+struct BoundingBox {
+    glm::vec3 min = glm::vec3(std::numeric_limits<float>::max());
+    glm::vec3 max = glm::vec3(std::numeric_limits<float>::min());
+
+    bool contains(const glm::vec3 &p) const;
+    BoundingBox operator|(const glm::vec3 &p) const;
+    BoundingBox &operator|=(const glm::vec3 &p);
+
+    bool intersects(const LineSegment &segment) const;
+    bool intersects(const Ray &ray) const;
 };
 
 struct Triangle {

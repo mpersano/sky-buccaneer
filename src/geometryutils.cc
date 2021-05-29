@@ -1,5 +1,45 @@
 #include "geometryutils.h"
 
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/component_wise.hpp>
+
+#include <tuple>
+
+glm::vec3 LineSegment::pointAt(float t) const
+{
+    return (1.0f - t) * from + t * to;
+}
+
+std::optional<float> LineSegment::intersection(const Triangle &triangle) const
+{
+    return triangle.intersection(*this);
+}
+
+bool LineSegment::intersects(const BoundingBox &box) const
+{
+    return box.intersects(*this);
+}
+
+Ray LineSegment::ray() const
+{
+    return { from, to - from };
+}
+
+glm::vec3 Ray::pointAt(float t) const
+{
+    return origin + t * direction;
+}
+
+std::optional<float> Ray::intersection(const Triangle &triangle) const
+{
+    return triangle.intersection(*this);
+}
+
+bool Ray::intersects(const BoundingBox &box) const
+{
+    return box.intersects(*this);
+}
+
 bool BoundingBox::contains(const glm::vec3 &p) const
 {
     constexpr auto Epsilon = 1e-6;
@@ -22,29 +62,46 @@ BoundingBox &BoundingBox::operator|=(const glm::vec3 &p)
     return *this;
 }
 
-glm::vec3 LineSegment::pointAt(float t) const
+static auto intersectionRange(const BoundingBox &box, const Ray &ray)
 {
-    return (1.0f - t) * from + t * to;
+    const auto t0 = (box.min - ray.origin) / ray.direction;
+    const auto t1 = (box.max - ray.origin) / ray.direction;
+
+    const auto tMin = glm::min(t0, t1);
+    const auto tMax = glm::max(t0, t1);
+
+    const auto tClose = glm::compMax(tMin);
+    const auto tFar = glm::compMin(tMax);
+
+    return std::tuple(tClose, tFar);
 }
 
-std::optional<float> LineSegment::intersection(const Triangle &triangle) const
+bool BoundingBox::intersects(const LineSegment &segment) const
 {
-    return triangle.intersection(*this);
+    const auto [tClose, tFar] = intersectionRange(*this, segment.ray());
+
+    if (tClose > tFar)
+        return false;
+
+    // intersection outside segment?
+    if (tClose > 1.0f || tFar < 0.0f)
+        return false;
+
+    return true;
 }
 
-Ray LineSegment::ray() const
+bool BoundingBox::intersects(const Ray &ray) const
 {
-    return { from, to - from };
-}
+    const auto [tClose, tFar] = intersectionRange(*this, ray);
 
-glm::vec3 Ray::pointAt(float t) const
-{
-    return origin + t * direction;
-}
+    if (tClose > tFar)
+        return false;
 
-std::optional<float> Ray::intersection(const Triangle &triangle) const
-{
-    return triangle.intersection(*this);
+    // intersection behind ray origin?
+    if (tFar < 0.0f)
+        return false;
+
+    return true;
 }
 
 std::optional<float> Triangle::intersection(const LineSegment &segment) const
