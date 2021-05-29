@@ -275,20 +275,57 @@ def write_entity(filepath, context):
                 write_mesh(mesh)
                 obj.to_mesh_clear()
 
-class ExportEntity(bpy.types.Operator, ExportHelper):
-    bl_idname = "export_mesh.z3"
-    bl_label = "Export Entity"
+class ZilchEntityExporter(bpy.types.Operator, ExportHelper):
+    bl_idname = "export_mesh.w3d"
+    bl_label = "Export w3d"
     bl_description = "Export scene to game entity"
 
-    filename_ext = ".z3"
+    filename_ext = ".w3d"
 
     def execute(self, context):
         write_entity(self.filepath, context)
         return {'FINISHED'}
 
+class ZilchLevelExporter(bpy.types.Operator, ExportHelper):
+    bl_idname = "export_mesh.z3d"
+    bl_label = "Export z3d"
+    bl_description = "Export scene to game level"
+
+    filename_ext = ".z3d"
+
+    def execute(self, context):
+        write_level(self.filepath, context)
+        return {'FINISHED'}
+
+def menu_func_export_w3d(self, context):
+    self.layout.operator(ZilchEntityExporter.bl_idname, text="Zilch Entity (.w3d)")
+
+def menu_func_export_z3d(self, context):
+    self.layout.operator(ZilchLevelExporter.bl_idname, text="Zilch Level (.z3d)")
+
+classes = (
+    ZilchEntityExporter,
+    ZilchLevelExporter
+)
+
+menu_funcs = (
+    menu_func_export_w3d,
+    menu_func_export_z3d
+)
+
 def register():
-    print('registered!')
-    bpy.utils.register_class(EntityExporter)
+    for clazz in classes:
+        bpy.utils.register_class(clazz)
+
+    for menu_func in menu_funcs:
+        bpy.types.TOPBAR_MT_file_export.append(menu_func)
 
 def unregister():
-    bpy.utils.unregister_class(EntityExporter)
+    for clazz in classes:
+        bpy.utils.unregister_class(clazz)
+
+    for menu_func in menu_funcs:
+        bpy.types.TOPBAR_MT_file_export.remove(menu_func)
+
+if __name__ == '__main__':
+    register()
