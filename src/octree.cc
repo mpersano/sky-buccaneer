@@ -14,9 +14,9 @@
 #include <limits>
 #include <set>
 
-#define DRAW_NODE_BOXES 1
+#define DRAW_NODE_BOXES 0
 #define DRAW_POLYGON_EDGES 0
-#define DEBUG_INTERSECTIONS 1
+#define DEBUG_INTERSECTIONS 0
 
 namespace {
 const bool fuzzyCompare(float a, float b)
