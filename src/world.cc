@@ -26,6 +26,7 @@ struct BulletState {
 };
 
 constexpr const auto MaxBullets = 200;
+constexpr const auto BulletSize = glm::vec2(0.1, 2);
 
 std::unique_ptr<Mesh> makeBulletMesh()
 {
@@ -113,7 +114,7 @@ void World::render() const
     if (!m_bullets.empty()) {
         std::vector<BulletState> bulletData;
         std::transform(m_bullets.begin(), m_bullets.end(), std::back_inserter(bulletData), [](const Bullet &bullet) -> BulletState {
-            return { bullet.position, bullet.velocity, glm::vec2(.1, 2) };
+            return { bullet.position, bullet.velocity, BulletSize };
         });
         m_bulletsMesh->setVertexCount(m_bullets.size());
         m_bulletsMesh->setVertexData(bulletData.data());
@@ -146,9 +147,8 @@ void World::updateBullets(float elapsed)
         if (bullet.lifetime < 0.0)
             return false;
         const auto d = glm::normalize(bullet.velocity);
-        constexpr auto BulletLength = 2.0f;
-        const auto p0 = bullet.position - 0.5f * BulletLength * d;
-        const auto p1 = bullet.position + 0.5f * BulletLength * d;
+        const auto p0 = bullet.position - 0.5f * BulletSize.y * d;
+        const auto p1 = bullet.position + 0.5f * BulletSize.y * d;
         const auto segment = LineSegment { p0, p1 };
         const auto collisionPosition = [this, &segment] {
             if (auto position = m_level->findCollision(segment))
