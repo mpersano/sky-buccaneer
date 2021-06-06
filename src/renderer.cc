@@ -11,6 +11,7 @@
 #include <glm/gtx/string_cast.hpp>
 
 #include <algorithm>
+#include <optional>
 
 Renderer::Renderer(ShaderManager *shaderManager, const Camera *camera)
     : m_shadowBuffer(new GL::ShadowBuffer(1024, 1024))

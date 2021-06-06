@@ -13,6 +13,7 @@
 #include <iostream>
 #include <limits>
 #include <set>
+#include <unordered_map>
 
 #define DRAW_NODE_BOXES 0
 #define DRAW_POLYGON_EDGES 0
