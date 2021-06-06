@@ -6,9 +6,104 @@
 #include <GL/glew.h>
 #include <GLFW/glfw3.h>
 
+#include <spdlog/spdlog.h>
+
 #include <iostream>
 
 namespace {
+
+const std::string glDebugSourceToString(GLenum type)
+{
+    switch (type) {
+    case GL_DEBUG_SOURCE_API:
+        return "API";
+    case GL_DEBUG_SOURCE_WINDOW_SYSTEM:
+        return "WINDOW_SYSTEM";
+    case GL_DEBUG_SOURCE_SHADER_COMPILER:
+        return "SHADER_COMPILER";
+    case GL_DEBUG_SOURCE_THIRD_PARTY:
+        return "THIRD_PARTY";
+    case GL_DEBUG_SOURCE_APPLICATION:
+        return "APPLICATION";
+    case GL_DEBUG_SOURCE_OTHER:
+        return "OTHER";
+    default:
+        return std::to_string(static_cast<int>(type));
+    }
+}
+
+const std::string glDebugTypeToString(GLenum type)
+{
+    switch (type) {
+    case GL_DEBUG_TYPE_ERROR:
+        return "ERROR";
+    case GL_DEBUG_TYPE_DEPRECATED_BEHAVIOR:
+        return "DEPRECATED_BEHAVIOR";
+    case GL_DEBUG_TYPE_UNDEFINED_BEHAVIOR:
+        return "UNDEFINED_BEHAVIOR";
+    case GL_DEBUG_TYPE_PORTABILITY:
+        return "PORTABILITY";
+    case GL_DEBUG_TYPE_PERFORMANCE:
+        return "PERFORMANCE";
+    case GL_DEBUG_TYPE_MARKER:
+        return "MARKER";
+    case GL_DEBUG_TYPE_PUSH_GROUP:
+        return "PUSH_GROUP";
+    case GL_DEBUG_TYPE_POP_GROUP:
+        return "POP_GROUP";
+    case GL_DEBUG_TYPE_OTHER:
+        return "OTHER";
+    default:
+        return std::to_string(static_cast<int>(type));
+    }
+}
+
+const std::string glDebugSeverityToString(GLenum severity)
+{
+    switch (severity) {
+    case GL_DEBUG_SEVERITY_LOW:
+        return "LOW";
+    case GL_DEBUG_SEVERITY_MEDIUM:
+        return "MEDIUM";
+    case GL_DEBUG_SEVERITY_HIGH:
+        return "HIGH";
+    case GL_DEBUG_SEVERITY_NOTIFICATION:
+        return "NOTIFICATION";
+    default:
+        return std::to_string(static_cast<int>(severity));
+    }
+}
+
+enum class DebugMessageSeverity : unsigned {
+    None = 0,
+    Low = 1 << 0,
+    Medium = 1 << 1,
+    High = 1 << 2,
+    Notification = 1 << 3,
+    All = Low | Medium | High | Notification
+};
+
+constexpr DebugMessageSeverity operator|(DebugMessageSeverity x, DebugMessageSeverity y)
+{
+    using UT = typename std::underlying_type_t<DebugMessageSeverity>;
+    return static_cast<DebugMessageSeverity>(static_cast<UT>(x) | static_cast<UT>(y));
+}
+
+constexpr DebugMessageSeverity operator&(DebugMessageSeverity x, DebugMessageSeverity y)
+{
+    using UT = typename std::underlying_type_t<DebugMessageSeverity>;
+    return static_cast<DebugMessageSeverity>(static_cast<UT>(x) & static_cast<UT>(y));
+}
+
+DebugMessageSeverity &operator|=(DebugMessageSeverity &x, DebugMessageSeverity y)
+{
+    return x = x | y;
+}
+
+DebugMessageSeverity &operator&=(DebugMessageSeverity &x, DebugMessageSeverity y)
+{
+    return x = x & y;
+}
 
 class GameWindow : private NonCopyable
 {
@@ -16,11 +111,13 @@ public:
     GameWindow(int width, int height, const char *title);
     ~GameWindow();
 
+    void enableGLDebug(DebugMessageSeverity severityMask);
     void renderLoop();
 
 private:
     static void sizeCallback(GLFWwindow *window, int width, int height);
     static void keyCallback(GLFWwindow *window, int key, int scancode, int action, int mode);
+    void debugMessage(GLenum source, GLenum type, GLuint id, GLenum severity, std::string_view message) const;
 
     void resize(int width, int height);
     void key(int key, int scancode, int action, int mode);
@@ -28,6 +125,7 @@ private:
     GLFWwindow *m_window = nullptr;
     std::unique_ptr<World> m_world;
     InputState m_inputState = InputState::None;
+    DebugMessageSeverity m_severityMask = DebugMessageSeverity::None;
 };
 
 GameWindow::GameWindow(int width, int height, const char *title)
@@ -59,17 +157,44 @@ GameWindow::GameWindow(int width, int height, const char *title)
         panic("OpenGL 4.2 not supported\n");
     }
 
-    glEnable(GL_DEBUG_OUTPUT);
-    glDebugMessageCallback(
-            [](GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei /*length*/, const GLchar *message,
-               const void * /*user*/) { std::cerr << source << ':' << type << ':' << severity << ':' << message << '\n'; },
-            nullptr);
-
     m_world.reset(new World);
 
     int windowWidth, windowHeight;
     glfwGetWindowSize(m_window, &windowWidth, &windowHeight);
     m_world->resize(windowWidth, windowHeight);
+}
+
+void GameWindow::enableGLDebug(DebugMessageSeverity severityMask)
+{
+    m_severityMask = severityMask;
+    glEnable(GL_DEBUG_OUTPUT);
+    glDebugMessageCallback(
+            [](GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar *message, const void *user) {
+                reinterpret_cast<const GameWindow *>(user)->debugMessage(source, type, id, severity, std::string_view(message, length));
+            },
+            this);
+}
+
+void GameWindow::debugMessage(GLenum source, GLenum type, GLuint id, GLenum severity, std::string_view message) const
+{
+    const auto severityBit = [severity] {
+        switch (severity) {
+        case GL_DEBUG_SEVERITY_LOW:
+            return DebugMessageSeverity::Low;
+        case GL_DEBUG_SEVERITY_MEDIUM:
+            return DebugMessageSeverity::Medium;
+        case GL_DEBUG_SEVERITY_HIGH:
+            return DebugMessageSeverity::High;
+        case GL_DEBUG_SEVERITY_NOTIFICATION:
+            return DebugMessageSeverity::Notification;
+        default:
+            break;
+        }
+        return DebugMessageSeverity::None;
+    }();
+    if ((m_severityMask & severityBit) == DebugMessageSeverity::None)
+        return;
+    spdlog::info("GL debug (source={}, type={}, severity={}): {}", glDebugSourceToString(source), glDebugTypeToString(type), glDebugSeverityToString(severity), message);
 }
 
 void GameWindow::renderLoop()
@@ -146,5 +271,6 @@ void GameWindow::resize(int width, int height)
 int main()
 {
     GameWindow window(800, 400, "hello");
+    window.enableGLDebug(DebugMessageSeverity::Medium | DebugMessageSeverity::High);
     window.renderLoop();
 }
