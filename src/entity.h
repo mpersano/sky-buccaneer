@@ -31,18 +31,21 @@ class Entity
 public:
     ~Entity();
 
-    void load(const char *filepath, MaterialCache *materialCache);
+    bool load(const char *filepath, MaterialCache *materialCache);
     void render(Renderer *renderer, const glm::mat4 &worldMatrix, float frame) const;
     std::optional<glm::vec3> findCollision(const LineSegment &segment, const glm::mat4 &worldMatrix, float frame) const;
 
     bool setActiveAction(std::string_view node, std::string_view action);
 
 private:
+    bool load(DataStream &ds, MaterialCache *materialCache);
     struct Node {
         ~Node();
         void render(Renderer *renderer, const glm::mat4 &parentWorldMatrix, float frame) const;
         std::optional<float> intersection(const LineSegment &segment, const glm::mat4 &parentWorldMatrix, float frame) const;
         glm::mat4 worldMatrixAt(const glm::mat4 &parentWorldMatrix, float frame) const;
+        void dump(int indent) const;
+
         std::string name;
         Transform transform;
         const Node *parent = nullptr;

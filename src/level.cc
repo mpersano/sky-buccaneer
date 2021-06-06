@@ -5,12 +5,12 @@
 #include "materialcache.h"
 #include "mesh.h"
 #include "octree.h"
-#include "panic.h"
 #include "renderer.h"
 
 #include <glm/gtx/string_cast.hpp>
 
-#include <iostream>
+#include <spdlog/spdlog.h>
+
 #include <limits>
 
 Level::Level()
@@ -20,19 +20,31 @@ Level::Level()
 
 Level::~Level() = default;
 
-void Level::load(const char *path, MaterialCache *materialCache)
+bool Level::load(const char *filepath, MaterialCache *materialCache)
+{
+    DataStream ds(filepath);
+    if (!ds) {
+        spdlog::error("Failed to open {}", filepath);
+        return false;
+    }
+
+    if (!load(ds, materialCache)) {
+        spdlog::error("Malformed entity file {}", filepath);
+        return false;
+    }
+
+    spdlog::info("Read level file {}", filepath);
+
+    return true;
+}
+
+bool Level::load(DataStream &ds, MaterialCache *materialCache)
 {
     std::vector<Face> faces;
-
-    DataStream ds(path);
-    if (!ds) {
-        panic("failed to open %s\n", path);
-    }
 
     uint32_t meshCount;
     ds >> meshCount;
 
-    std::cout << "Reading " << meshCount << " meshes\n";
     for (int i = 0; i < meshCount; ++i) {
         MaterialKey materialKey;
         ds >> materialKey;
@@ -82,9 +94,6 @@ void Level::load(const char *path, MaterialCache *materialCache)
 #endif
         }
 
-        std::cout << "**** mesh: " << vertices.size() << ' ' << indices.size() << '\n';
-        std::cout << glm::to_string(vertices[0].position) << ' ' << glm::to_string(vertices[1].position) << '\n';
-
 #if DRAW_RAW_LEVEL_MESHES
         auto mesh = makeMesh(GL_TRIANGLES, vertices, indices);
         m_meshes.push_back({ std::move(mesh), material });
@@ -92,6 +101,8 @@ void Level::load(const char *path, MaterialCache *materialCache)
     }
 
     m_octree->initialize(faces);
+
+    return true;
 }
 
 void Level::render(Renderer *renderer) const

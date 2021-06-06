@@ -3,13 +3,13 @@
 #include "datastream.h"
 #include "materialcache.h"
 #include "mesh.h"
-#include "panic.h"
 #include "renderer.h"
 #include "shaderprogram.h"
 #include "transformutils.h"
 
 #include <algorithm>
-#include <iostream>
+
+#include <spdlog/spdlog.h>
 
 #include <glm/gtx/string_cast.hpp>
 
@@ -61,10 +61,8 @@ std::unique_ptr<Action> readAction(DataStream &ds)
 {
     std::unique_ptr<Action> action(new Action);
     ds >> action->name;
-    std::cout << "Reading action `" << action->name << "'\n";
     uint32_t channelCount;
     ds >> channelCount;
-    std::cout << "Reading " << channelCount << " channels\n";
     for (int j = 0; j < channelCount; ++j) {
         enum class PathType : uint8_t { Rotation,
                                         Translation,
@@ -95,30 +93,36 @@ Entity::~Entity() = default;
 
 Entity::Node::~Node() = default;
 
-void Entity::load(const char *filepath, MaterialCache *materialCache)
+bool Entity::load(const char *filepath, MaterialCache *materialCache)
 {
     DataStream ds(filepath);
     if (!ds) {
-        panic("failed to open %s\n", filepath);
+        spdlog::error("Failed to open {}", filepath);
+        return false;
     }
 
-    const auto panicUnless = [filepath](bool condition) {
-        if (!condition) {
-            panic("malformed entity file %s\n", filepath);
-        }
-    };
+    if (!load(ds, materialCache)) {
+        spdlog::error("Malformed entity file {}", filepath);
+        return false;
+    }
 
+    spdlog::info("Read entity file {}, nodes:", filepath);
+    for (const auto *node : m_rootNodes)
+        node->dump(0);
+
+    return true;
+}
+
+bool Entity::load(DataStream &ds, MaterialCache *materialCache)
+{
     uint32_t nodeCount;
     ds >> nodeCount;
-
-    std::cout << "**** nodeCount=" << nodeCount << '\n';
 
     std::generate_n(std::back_inserter(m_nodes), nodeCount, [] {
         return std::make_unique<Node>();
     });
     for (auto &node : m_nodes) {
         ds >> node->name;
-        std::cout << "Reading node `" << node->name << "'\n";
 
         enum class NodeType : uint8_t { Empty,
                                         Mesh } nodeType;
@@ -132,16 +136,19 @@ void Entity::load(const char *filepath, MaterialCache *materialCache)
         for (int i = 0; i < childCount; ++i) {
             uint32_t childIndex;
             ds >> childIndex;
-            panicUnless(childIndex < m_nodes.size());
+            if (childIndex >= m_nodes.size()) {
+                return false;
+            }
             auto *child = m_nodes[childIndex].get();
-            panicUnless(!child->parent);
+            if (child->parent) {
+                return false;
+            }
             child->parent = node.get();
             node->children.push_back(child);
         }
 
         uint32_t actionCount;
         ds >> actionCount;
-        std::cout << "Reading " << actionCount << " actions\n";
         node->actions.reserve(actionCount);
         for (int i = 0; i < actionCount; ++i) {
             node->actions.push_back(readAction(ds));
@@ -150,7 +157,6 @@ void Entity::load(const char *filepath, MaterialCache *materialCache)
         if (nodeType == NodeType::Mesh) {
             uint32_t meshCount;
             ds >> meshCount;
-            std::cout << "Reading " << meshCount << " meshes\n";
             node->meshes.reserve(meshCount);
 
             for (int i = 0; i < meshCount; ++i) {
@@ -169,6 +175,8 @@ void Entity::load(const char *filepath, MaterialCache *materialCache)
             m_rootNodes.push_back(node.get());
         }
     }
+
+    return true;
 }
 
 void Entity::render(Renderer *renderer, const glm::mat4 &worldMatrix, float frame) const
@@ -269,4 +277,11 @@ std::optional<float> Entity::Node::intersection(const LineSegment &segment, cons
     };
     const auto localLineSegment = LineSegment { mapToLocal(segment.from), mapToLocal(segment.to) };
     return collisionMesh.intersection(localLineSegment);
+}
+
+void Entity::Node::dump(int indent) const
+{
+    spdlog::info("{:>{}} {}: {} meshes, {} actions", "", indent, name, meshes.size(), actions.size());
+    for (const auto *child : children)
+        child->dump(indent + 1);
 }
