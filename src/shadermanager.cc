@@ -1,6 +1,5 @@
 #include "shadermanager.h"
 
-#include <iostream>
 #include <type_traits>
 
 #include <spdlog/spdlog.h>

@@ -11,7 +11,6 @@
 #include "shadermanager.h"
 
 #include <algorithm>
-#include <iostream>
 
 #include <GL/glew.h>
 
