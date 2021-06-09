@@ -9,7 +9,7 @@ GameObject::GameObject(World *world, const char *entityPath)
     , m_position(glm::vec3(0))
     , m_rotation(glm::mat3(1))
 {
-    m_entity->load(entityPath, world->materialCache());
+    m_entity->load(entityPath);
     updateTransformMatrix();
 }
 

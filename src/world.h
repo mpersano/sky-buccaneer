@@ -8,7 +8,6 @@
 #include <vector>
 
 class ShaderManager;
-class MaterialCache;
 class Renderer;
 class Entity;
 class Mesh;
@@ -24,7 +23,6 @@ public:
     ~World();
 
     ShaderManager *shaderManager() { return m_shaderManager.get(); }
-    MaterialCache *materialCache() { return m_materialCache.get(); }
     InputState inputState() { return m_inputState; }
 
     void resize(int width, int height);
@@ -39,7 +37,6 @@ private:
     void spawnExplosion(const glm::vec3 &center);
 
     std::unique_ptr<ShaderManager> m_shaderManager;
-    std::unique_ptr<MaterialCache> m_materialCache;
     std::unique_ptr<Camera> m_camera;
     std::unique_ptr<Renderer> m_renderer;
     std::unique_ptr<Player> m_player;

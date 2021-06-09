@@ -25,7 +25,6 @@ DataStream &operator>>(DataStream &ds, MaterialKey &material);
 
 struct Material {
 public:
-    explicit Material(const MaterialKey &materialKey);
     explicit Material(ShaderManager::Program program);
     explicit Material(ShaderManager::Program program, const std::string &baseColorTexture);
     ~Material();
@@ -37,3 +36,5 @@ private:
     ShaderManager::Program m_program;
     std::unique_ptr<GL::Texture> m_baseColor;
 };
+
+Material *cachedMaterial(const MaterialKey &key);

@@ -6,7 +6,6 @@
 
 #include <memory>
 
-class MaterialCache;
 class Entity;
 class Renderer;
 class World;

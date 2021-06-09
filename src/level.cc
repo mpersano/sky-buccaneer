@@ -2,7 +2,6 @@
 
 #include "datastream.h"
 #include "material.h"
-#include "materialcache.h"
 #include "mesh.h"
 #include "octree.h"
 #include "renderer.h"
@@ -20,7 +19,7 @@ Level::Level()
 
 Level::~Level() = default;
 
-bool Level::load(const char *filepath, MaterialCache *materialCache)
+bool Level::load(const char *filepath)
 {
     DataStream ds(filepath);
     if (!ds) {
@@ -28,7 +27,7 @@ bool Level::load(const char *filepath, MaterialCache *materialCache)
         return false;
     }
 
-    if (!load(ds, materialCache)) {
+    if (!load(ds)) {
         spdlog::error("Malformed entity file {}", filepath);
         return false;
     }
@@ -38,7 +37,7 @@ bool Level::load(const char *filepath, MaterialCache *materialCache)
     return true;
 }
 
-bool Level::load(DataStream &ds, MaterialCache *materialCache)
+bool Level::load(DataStream &ds)
 {
     std::vector<Face> faces;
 
@@ -48,7 +47,7 @@ bool Level::load(DataStream &ds, MaterialCache *materialCache)
     for (int i = 0; i < meshCount; ++i) {
         MaterialKey materialKey;
         ds >> materialKey;
-        const auto *material = materialCache->cachedMaterial(materialKey);
+        const auto *material = cachedMaterial(materialKey);
 
         std::vector<MeshVertex> vertices;
         ds >> vertices;

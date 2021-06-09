@@ -17,7 +17,6 @@ set(GAME_SOURCES
     image.cc
     texture.cc
     material.cc
-    materialcache.cc
     datastream.cc
     level.cc
     octree.cc

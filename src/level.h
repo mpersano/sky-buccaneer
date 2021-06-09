@@ -10,7 +10,6 @@
 class Mesh;
 class Material;
 class Renderer;
-class MaterialCache;
 class Octree;
 class DataStream;
 
@@ -22,12 +21,12 @@ public:
     Level();
     ~Level();
 
-    bool load(const char *path, MaterialCache *materialCache);
+    bool load(const char *path);
     void render(Renderer *renderer) const;
     std::optional<glm::vec3> findCollision(const LineSegment &segment) const;
 
 private:
-    bool load(DataStream &ds, MaterialCache *materialCache);
+    bool load(DataStream &ds);
 #if DRAW_RAW_LEVEL_MESHES
     struct MeshMaterial {
         std::unique_ptr<Mesh> mesh;

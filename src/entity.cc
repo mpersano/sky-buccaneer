@@ -1,7 +1,7 @@
 #include "entity.h"
 
 #include "datastream.h"
-#include "materialcache.h"
+#include "material.h"
 #include "mesh.h"
 #include "renderer.h"
 #include "shaderprogram.h"
@@ -93,7 +93,7 @@ Entity::~Entity() = default;
 
 Entity::Node::~Node() = default;
 
-bool Entity::load(const char *filepath, MaterialCache *materialCache)
+bool Entity::load(const char *filepath)
 {
     DataStream ds(filepath);
     if (!ds) {
@@ -101,7 +101,7 @@ bool Entity::load(const char *filepath, MaterialCache *materialCache)
         return false;
     }
 
-    if (!load(ds, materialCache)) {
+    if (!load(ds)) {
         spdlog::error("Malformed entity file {}", filepath);
         return false;
     }
@@ -113,7 +113,7 @@ bool Entity::load(const char *filepath, MaterialCache *materialCache)
     return true;
 }
 
-bool Entity::load(DataStream &ds, MaterialCache *materialCache)
+bool Entity::load(DataStream &ds)
 {
     uint32_t nodeCount;
     ds >> nodeCount;
@@ -163,7 +163,7 @@ bool Entity::load(DataStream &ds, MaterialCache *materialCache)
                 MaterialKey materialKey;
                 ds >> materialKey;
                 auto [triangles, mesh] = readMesh(ds);
-                const auto *material = materialCache->cachedMaterial(materialKey);
+                const auto *material = cachedMaterial(materialKey);
                 node->meshes.push_back({ std::move(mesh), material });
                 node->collisionMesh.addTriangles(triangles);
             }

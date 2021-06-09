@@ -4,7 +4,7 @@
 #include "entity.h"
 #include "foe.h"
 #include "level.h"
-#include "materialcache.h"
+#include "material.h"
 #include "mesh.h"
 #include "player.h"
 #include "renderer.h"
@@ -54,7 +54,6 @@ const Material *bulletMaterial()
 
 World::World()
     : m_shaderManager(new ShaderManager)
-    , m_materialCache(new MaterialCache)
     , m_camera(new Camera)
     , m_renderer(new Renderer(m_shaderManager.get(), m_camera.get()))
     , m_level(new Level)
@@ -63,8 +62,8 @@ World::World()
     , m_explosionEntity(new Entity)
     , m_bulletsMesh(makeBulletMesh())
 {
-    m_level->load("assets/meshes/level.z3d", m_materialCache.get());
-    m_explosionEntity->load("assets/meshes/fireball.w3d", m_materialCache.get());
+    m_level->load("assets/meshes/level.z3d");
+    m_explosionEntity->load("assets/meshes/fireball.w3d");
 
     m_foe->setPosition(glm::vec3(8.0, 0.0, 0.0));
     m_foe->setRotation(glm::mat3(glm::rotate(glm::mat4(1), .5f, glm::normalize(glm::vec3(1.0f)))));

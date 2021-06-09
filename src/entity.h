@@ -12,7 +12,6 @@
 class Mesh;
 class Material;
 class Renderer;
-class MaterialCache;
 
 struct Action {
     std::string name;
@@ -31,14 +30,15 @@ class Entity
 public:
     ~Entity();
 
-    bool load(const char *filepath, MaterialCache *materialCache);
+    bool load(const char *filepath);
     void render(Renderer *renderer, const glm::mat4 &worldMatrix, float frame) const;
     std::optional<glm::vec3> findCollision(const LineSegment &segment, const glm::mat4 &worldMatrix, float frame) const;
 
     bool setActiveAction(std::string_view node, std::string_view action);
 
 private:
-    bool load(DataStream &ds, MaterialCache *materialCache);
+    bool load(DataStream &ds);
+
     struct Node {
         ~Node();
         void render(Renderer *renderer, const glm::mat4 &parentWorldMatrix, float frame) const;
